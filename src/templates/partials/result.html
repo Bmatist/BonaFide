@@ -1,0 +1,182 @@
+<div class="result-card fade-in">
+    <div class="meta">
+        <span class="url-source">Source: {{ url }}</span>
+    </div>
+
+    <div class="analysis-grid">
+        <!-- Left Panel: Objectivity Assessment -->
+        <div class="left-panel">
+            <div class="stat-box assessment-card">
+                <h3>Objectivity Assessment</h3>
+
+                {% if analysis.objectivity_level %}
+                <div class="gauge-container">
+                    <!-- Semi-circle Gauge SVG -->
+                    <!-- ViewBox: Expanded to -25..225 x 0..130 to move text below pivot (y=100). -->
+                    <svg class="gauge-svg" viewBox="-25 0 250 130">
+                        <!-- Segments: 5 segments of 36 degrees each. Radius 70 (Outer edge ~80 with stroke 20) -->
+                        <!-- Center 100,100 -->
+
+                        <!-- Very Low (Red): 180 -> 144 deg -->
+                        <path d="M 30,100 A 70,70 0 0 1 43.4,58.9" fill="none" stroke="#ef4444" stroke-width="20" />
+
+                        <!-- Low (Orange): 144 -> 108 deg -->
+                        <path d="M 43.4,58.9 A 70,70 0 0 1 78.4,33.4" fill="none" class="gauge-segment low"
+                            stroke="#f97316" stroke-width="20" />
+
+                        <!-- Moderate (Yellow): 108 -> 72 deg -->
+                        <path d="M 78.4,33.4 A 70,70 0 0 1 121.6,33.4" fill="none" class="gauge-segment moderate"
+                            stroke="#eab308" stroke-width="20" />
+
+                        <!-- High (Lime): 72 -> 36 deg -->
+                        <path d="M 121.6,33.4 A 70,70 0 0 1 156.6,58.9" fill="none" class="gauge-segment high"
+                            stroke="#84cc16" stroke-width="20" />
+
+                        <!-- Very High (Green): 36 -> 0 deg -->
+                        <path d="M 156.6,58.9 A 70,70 0 0 1 170,100" fill="none" class="gauge-segment very-high"
+                            stroke="#22c55e" stroke-width="20" />
+
+                        <!-- Labels Outside Segments (Radius ~95/100) -->
+                        <text x="10" y="75" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                            text-anchor="end">V. Low</text>
+                        <text x="45" y="25" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                            text-anchor="end">Low</text>
+                        <text x="100" y="8" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                            text-anchor="middle">Mod</text>
+                        <text x="155" y="25" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                            text-anchor="start">High</text>
+                        <text x="190" y="75" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                            text-anchor="start">V. High</text>
+
+                        <!-- Needle -->
+                        <g class="needle-group"
+                            style="transform: rotate({{ (analysis.score|float / 100 * 180) - 90 }}deg); transform-origin: 100px 100px;">
+                            <!-- Shortened needle to fit smaller radius -->
+                            <path d="M 100,100 L 100,35" class="needle-path" stroke="#333" stroke-width="4"
+                                stroke-linecap="round" />
+                            <circle cx="100" cy="100" r="6" fill="#333" />
+                        </g>
+                    </svg>
+
+                    <div class="gauge-overlay">
+                        <div class="current-assessment" style="color: var(--text-main); font-weight: 700;">{{
+                            analysis.objectivity_level.assessment }}</div>
+                        <!-- <div class="current-score-mini">{{ analysis.score }}</div> -->
+                    </div>
+                </div>
+
+                <div class="level-meta compact"
+                    style="margin-top: 5px; text-align: center; display: flex; flex-direction: column; gap: 4px;">
+                    <div class="meta-row centered">
+                        <span class="label">Range:</span>
+                        <span class="val">{{ analysis.objectivity_level.range }}</span>
+                    </div>
+                    <!-- <span class="sep" style="margin: 0 5px; color: #ccc;">|</span> -->
+                    <div class="meta-row centered">
+                        <span class="label">Confidence:</span>
+                        <span class="val">
+                            {{ analysis.objectivity_level.confidence }}
+                            <div class="tooltip-wrapper">
+                                <span class="info-icon">i</span>
+                                <div class="tooltip-content">Based on article length and density of claims.</div>
+                            </div>
+                        </span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="score-value">{{ analysis.score }}<span class="total">/100</span></div>
+                <div class="score-bar">
+                    <div class="fill" style="width: {{ analysis.score }}%;"></div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Panel: Dimensions & Narrative -->
+        <div class="right-panel">
+            <div class="stat-box">
+                <h3>Ideological Dimensions</h3>
+                <div class="dimensions-list">
+                    {% if analysis.ideological_dimensions is mapping %}
+                    {% for key, value in analysis.ideological_dimensions.items() %}
+                    <div class="dimension-item">
+                        <span class="dim-key">{{ key }}:</span>
+                        <span class="dim-val">{{ value }}</span>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="value">{{ analysis.orientation }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="stat-box">
+                <h3>Narrative Alignment</h3>
+                <div class="narrative-list">
+                    {% if analysis.narrative_alignment %}
+                    <ul class="simple-list">
+                        {% for item in analysis.narrative_alignment %}
+                        <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="value">{{ analysis.alignment }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    {% if analysis.subjective_claims %}
+    <div class="details-section">
+        <h3>Subjective Claims (Evidence of Bias)</h3>
+        <ul class="claims-list subjective">
+            {% if analysis.subjective_claims is mapping %}
+            {% for technique, claims in analysis.subjective_claims.items() %}
+            <li class="technique-group">
+                <h4>{{ technique }}</h4>
+                <ul class="sub-claims-list">
+                    {% for item in claims %}
+                    <li class="claim-item">
+                        <span class="severity-tag {{ item.severity|lower }}">{{ item.severity }}</span>
+                        <span class="claim-quote">"{{ item.quote }}"</span>
+                        <span class="claim-analysis">— {{ item.analysis }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </li>
+            {% endfor %}
+            {% else %}
+            <!-- Fallback for old list format -->
+            {% for claim in analysis.subjective_claims %}
+            <li>{{ claim }}</li>
+            {% endfor %}
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if analysis.claims %}
+    <div class="details-section">
+        <h3>Factual Claims (Extracted)</h3>
+        <ul class="claims-list factual">
+            {% for claim in analysis.claims %}
+            <li>{{ claim }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if analysis.notable_omissions %}
+    <div class="details-section">
+        <h3>Counterfactual Context & Notable Omissions</h3>
+        <ul class="claims-list">
+            {% for omission in analysis.notable_omissions %}
+            <li>{{ omission }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>

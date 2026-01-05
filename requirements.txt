@@ -1,0 +1,10 @@
+google-generativeai
+requests
+beautifulsoup4
+python-dotenv
+google-genai
+fastapi
+uvicorn
+jinja2
+python-multipart
+newspaper3k
