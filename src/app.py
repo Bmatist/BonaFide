@@ -3,15 +3,16 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
-import os
-
-import sys
-
-# Add current directory to path to allow imports from src when running from root
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from scraper import scrape_article
 from analyzer import analyze_article
+
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+
+
 
 app = FastAPI(title="Political Bias Detector")
 

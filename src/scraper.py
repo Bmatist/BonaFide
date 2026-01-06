@@ -18,7 +18,7 @@ def scrape_article(url):
         article.parse()
         text = article.text
     except Exception:
-        pass # Fallback to BS4
+        pass
 
     # Use Newspaper3k result if it looks valid and substantial
     if text and len(text) > 200:
@@ -54,19 +54,16 @@ def scrape_article(url):
         if not content_node:
             content_node = soup.find('main')
         if not content_node:
-            # Fallback to body but with the noise usage removed above
             content_node = soup.body
 
         if content_node:
             text = content_node.get_text(separator=' ', strip=True)
-            
-            # Clean up whitespace
             lines = [line.strip() for line in text.splitlines()]
             chunks = [phrase.strip() for line in lines for phrase in line.split("  ")]
             text = ' '.join(chunk for chunk in chunks if chunk)
             return text
             
-        return "" # Failed to find content
+        return ""
         
     except Exception as e:
         raise Exception(f"Failed to scrape article: {str(e)}")

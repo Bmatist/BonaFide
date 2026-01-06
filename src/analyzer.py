@@ -8,69 +8,6 @@ import time
 # Load environment variables
 load_dotenv()
 
-# def analyze_article(text):
-#     """
-#     MOCK VERSION: Returns static data to avoid API usage during testing.
-#     """
-#     time.sleep(1.5) # Simulate API latency
-#     return {
-#         "ideological_dimensions": {
-#             "National Positioning": "Strongly Pro-Moroccan",
-#             "Diplomatic Framing": "Pro–EU Strategic Alignment",
-#             "Conflict Framing": "Delegitimizing Opposing Claims"
-#         },
-#         "narrative_alignment": [
-#             "Aligns with official Moroccan government positions",
-#             "Reinforces EU–Morocco strategic partnership framing"
-#         ],
-#         "objectivity_level": {
-#             "assessment": "Low",
-#             "range": "21 – 40",
-#             "confidence": "High",
-#             "definitions": "Frequent subjective framing; facts are present but subordinated"
-#         },
-#         "score": 30.0,
-#         "score_explanation": "Wf (188) / (Wf (188) + Weighted Ws (170.0)) * 100",
-#         "subjective_claims": {
-#             "Pre-emptive Delegitimization": [
-#                 {"severity": "Severe", "quote": "بلا أفق (Dead end)", "analysis": "Dismisses legal action before adjudication"},
-#                 {"severity": "Moderate", "quote": "مجرد تحركات رمزية... (Just symbolic moves)", "analysis": "Minimizes legal significance"}
-#             ],
-#             "Adversarial Framing": [
-#                 {"severity": "Moderate", "quote": "سياسة التشويش (Policy of obfuscation)", "analysis": "Frames actions as disruption"},
-#                 {"severity": "Moderate", "quote": "إفشال الضغوط... (Thwarting pressures)", "analysis": "Casts diplomacy as hostile pressure"}
-#             ],
-#             "Identity Labeling": [
-#                 {"severity": "Moderate", "quote": "جبهة البوليساريو الانفصالية (The separatist Polisario Front)", "analysis": "Consistent pejorative labeling"}
-#             ],
-#             "Emotive Intensification": [
-#                 {"severity": "Mild", "quote": "ضربة قاسية (Severe blow)", "analysis": "Emotional amplification"}
-#             ],
-#             "Positive Self-Framing": [
-#                 {"severity": "Mild", "quote": "شريكا موثوقا واستثنائيا (A reliable and exceptional partner)", "analysis": "Adulatory language"}
-#             ]
-#         },
-#         "claims": [
-#             "Peter Medawar won the Nobel Prize in Medicine in 1960 for his research on acquired immunological tolerance.",
-#             "Anwar Sadat was the first Arab leader to sign a peace treaty with Israel after the 1973 war.",
-#             "Naguib Mahfouz was the first Arab writer to receive the Nobel Prize in Literature in 1988.",
-#             "Elias James Corey won the Nobel Prize in Chemistry in 1990 for developing methodologies for organic synthesis.",
-#             "Yasser Arafat won the Nobel Peace Prize in 1994 shared with Yitzhak Rabin and Shimon Peres.",
-#             "Ahmed Zewail won the Nobel Prize in Chemistry in 1999 for his invention of femtochemistry.",
-#             "Mohamed ElBaradei won the Nobel Peace Prize in 2005 for his work with the IAEA.",
-#             "Tawakkol Karman was the first Arab woman to win the Nobel Peace Prize in 2011.",
-#             "The Tunisian National Dialogue Quartet won the Nobel Peace Prize in 2015 for facilitating a peaceful democratic transition.",
-#             "Abdulrazak Gurnah won the Nobel Prize in Literature in 2021.",
-#             "Moungi Bawendi won the Nobel Prize in Chemistry in 2023 for the development of quantum dots.",
-#             "Omar Yaghi is cited in the text as a 2025 Nobel Prize winner in Chemistry."
-#         ],
-#         "notable_omissions": [
-#             "Legal basis of the ECJ rulings involving distinct territory status",
-#             "Perspectives from international legal observers or UN resolutions",
-#             "Direct citations from the opposing party's official statements regarding the specific appeal"
-#         ]
-#     }
-
 def analyze_article(text):
     """
     Analyzes the article text using Gemini API for political orientation, 
@@ -135,9 +72,8 @@ def analyze_article(text):
 
         data = json.loads(result_text.strip())
         
-        # --- Python-based Score Calculation ---
+        # --- Score Calculation ---
         factual_claims = data.get('claims', [])
-        # subjective_claims is now a dict {Technique: [List of claim objects]}
         subjective_claims_data = data.get('subjective_claims', {})
         
         # Calculate Wf (Word count of Factual Claims)
@@ -154,11 +90,9 @@ def analyze_article(text):
                 if isinstance(items, list):
                     all_subjective_items.extend(items)
         elif isinstance(subjective_claims_data, list):
-             # Fallback if model returns list
             all_subjective_items = subjective_claims_data
 
         for claim_obj in all_subjective_items:
-            # Handle both object (new) and string (fallback) formats
             if isinstance(claim_obj, dict):
                 content = claim_obj.get('quote', '')
                 severity = claim_obj.get('severity', 'Mild').lower()
@@ -170,7 +104,6 @@ def analyze_article(text):
                 else:
                     intensity = 1.0
             else:
-                # Fallback for string format
                 content = str(claim_obj)
                 intensity = 1.0 # Default
                 lower_claim = content.lower()
@@ -188,7 +121,6 @@ def analyze_article(text):
             ws_weighted_sum += (word_count * intensity)
             
         # Formula: (Wf / (Wf + (Ws * I))) * 100
-        # Denominator check
         denominator = wf + ws_weighted_sum
         
         if denominator == 0:
