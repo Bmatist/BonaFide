@@ -58,10 +58,13 @@
                         </g>
                     </svg>
 
-                    <div class="gauge-overlay">
-                        <div class="current-assessment" style="color: var(--text-main); font-weight: 700;">{{
-                            analysis.objectivity_level.assessment }}</div>
-                        <!-- <div class="current-score-mini">{{ analysis.score }}</div> -->
+                </div>
+
+                <div class="current-assessment-container"
+                    style="text-align: center; margin-top: -5px; margin-bottom: 15px;">
+                    <div class="current-assessment"
+                        style="color: var(--text-main); font-weight: 800; font-size: 1.1em;">
+                        {{ analysis.objectivity_level.assessment }}
                     </div>
                 </div>
 

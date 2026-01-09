@@ -4,12 +4,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
 
-from scraper import scrape_article
-from analyzer import analyze_article
-
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from scraper import scrape_article
+from analyzer import analyze_article
+
+
 
 
 

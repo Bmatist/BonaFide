@@ -1,179 +1,195 @@
 import os
+import json
+import time
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
-import json
-import time
 
 # Load environment variables
 load_dotenv()
 
-def analyze_article(text):
-    """
-    Analyzes the article text using Gemini API for political orientation, 
-    group alignment, and objectivity score.
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY not found in environment variables.")
-        
-    client = genai.Client(api_key=api_key)
-    
-    prompt = f"""
-    You are a professional Media Bias Analyst / Public Editor / Fact-Checker.
+class MultiAgentAnalyzer:
+    def __init__(self):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables.")
+        self.client = genai.Client(api_key=api_key)
+        self.model = 'gemini-3-flash-preview' # Using Flash for speed in multi-step
 
-    Goal: Analyze the following article text and provide a structured assessment.
-    
-    1. Ideological Dimensions: Provide a structured object with the following keys:
-       - "National Positioning": (e.g. Strongly Pro-Government, Critical, Neutral)
-       - "Diplomatic Framing": (e.g. Pro-Western, Globalist, Sovereignist)
-       - "Conflict Framing": (e.g. Delegitimizing Opponent, Peace-Seeking, Aggressive)
-    2. Narrative Alignment: List specific narratives, official positions, or strategic frameworks the article reinforces or aligns with. Limit to the top 2-3 main narratives.
-    3. Subjective Claims: Analyze the text for subjective or biased language. Group your findings by "Rhetorical Technique" (e.g., Pre-emptive Delegitimization, Adversarial Framing, Identity Labeling, Emotive Intensification, etc.). For each technique, provide a list of claims containing:
-       - "severity": "Mild", "Moderate", or "Severe"
-       - "quote": The specific text
-       - "analysis": Brief explanation of why it is biased
-    4. Counterfactual Context & Notable Omissions: List 2-3 specific elements, perspectives, or legal/historical facts that are commonly present in neutral or multi-perspective coverage of this topic but are missing, underrepresented, or dismissed in this article.
-    5. Factual Claims: Identify key factual claims made in the article.
-
-    Text content:
-    {text[:30000]}  # Truncate to avoid context limit issues if extremely long
-    
-    Provide the output in valid JSON format with keys: "ideological_dimensions", "narrative_alignment", "subjective_claims", "notable_omissions", "claims".
-    "subjective_claims" should be a dictionary where keys are technique names and values are lists of objects.
-    "claims" should be a list of strings.
-    "narrative_alignment" should be a list of strings.
-    "notable_omissions" should be a list of strings.
-    """
-    
-    try:
-        response = client.models.generate_content(
-            model='gemini-3-flash-preview', 
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type='application/json'
-            )
+    def _call_model(self, prompt, response_schema=None):
+        """Helper to call Gemini with JSON enforcement."""
+        config = types.GenerateContentConfig(
+            response_mime_type='application/json'
         )
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=config
+            )
+            return json.loads(response.text.strip())
+        except Exception as e:
+            print(f"Model call failed: {e}")
+            return {}
+
+    def step_1_analyze_content(self, text):
+        """
+        Role: The Reader (Objective Extraction)
+        Goal: Extract what is physically in the text without judging it.
+        """
+        print("   [Step 1/4] Analyzing Content...")
+        prompt = f"""
+        Role: Objective Content Extractor.
+        Task: Read the text and extract verifiable data points. Do NOT evaluate bias.
+
+        Text: {text[:30000]}
+
+        Output JSON with keys:
+        - "main_topic": String (The core subject).
+        - "key_entities": List of strings (People, Org, Countries involved).
+        - "factual_claims": List of strings (Specific assertions made).
+        - "narrative_arc": String (The story being told).
+        - "tone_keywords": List of strings (Adjectives/Verbs used most frequently).
+        """
+        return self._call_model(prompt)
+
+    def step_2_get_context(self, analysis_data):
+        """
+        Role: The Historian (Blind Context Retrieval)
+        Goal: Retrieve standard perspectives on the topic WITHOUT seeing the article.
+        """
+        print("   [Step 2/4] Retrieving Context...")
+        topic = analysis_data.get("main_topic", "General News")
+        entities = analysis_data.get("key_entities", [])
         
-        # Access text directly
-        result_text = response.text
+        prompt = f"""
+        Role: Political Historian / Context Specialist.
+        Task: List the standard, multi-perspective viewpoints associated with this topic.
         
-        # --- Log Raw Response ---
+        Topic: {topic}
+        Key Entities: {', '.join(entities[:5])}
+
+        Output JSON with keys:
+        - "standard_viewpoints": List of strings (The 3-4 major stances on this issue, e.g., Pro-Gov, Opposition, International Law).
+        - "key_historical_facts": List of strings (Indisputable facts usually cited in comprehensive coverage).
+        - "controversies": List of strings (The usual points of contention).
+        """
+        return self._call_model(prompt)
+
+    def step_3_compare(self, analysis_data, context_data):
+        """
+        Role: The Judge (Gap Analysis)
+        Goal: Compare what was specific in the article vs what exists in the world.
+        """
+        print("   [Step 3/4] Comparing & Detecting Bias...")
+        prompt = f"""
+        Role: Bias Comparator.
+        Task: Compare the Article's content against the Standard Context to find Omissions and Framing.
+
+        Article Narrative: {analysis_data.get('narrative_arc')}
+        Article Claims: {json.dumps(analysis_data.get('factual_claims', []))}
+
+        Standard Context: {json.dumps(context_data.get('standard_viewpoints', []))}
+        Standard Facts: {json.dumps(context_data.get('key_historical_facts', []))}
+
+        Output JSON with keys:
+        - "omissions": List of strings (Important context or facts from Standard Context NOT present in Article).
+        - "framing_bias": List of strings (How the article's narrative deviates from a neutral stance).
+        - "ideological_stance": Object {{ "National": "...", "Diplomatic": "...", "Conflict": "..." }}
+        """
+        return self._call_model(prompt)
+
+    def step_4_synthesize(self, analysis_data, context_data, comparison_data, original_text):
+        """
+        Role: The Narrator (Final Formatting)
+        Goal: Format the data into the structure required by the frontend.
+        """
+        print("   [Step 4/4] Synthesizing Final Report...")
+        prompt = f"""
+        Role: Final Report Editor.
+        Task: Synthesize the findings into a structured report for the UI.
+
+        Analysis: {json.dumps(analysis_data)}
+        Comparison: {json.dumps(comparison_data)}
+        Context: {json.dumps(context_data)}
+        Original Text Snippet: {original_text[:1000]}
+
+        Requirements:
+        1. "subjective_claims": Group by Rhetorical Technique (e.g., "Adversarial Framing", "Emotive Intensification"). keys=Technique, value=List of {{severity, quote, analysis}}.
+        2. "objectivity_level": Assess based on the ratio of Omissions/Framing.
+
+        Output JSON with keys:
+        - "ideological_dimensions": (From Comparison)
+        - "narrative_alignment": List of strings (The specific narrative the article pushes).
+        - "subjective_claims": Dictionary (Technique -> List of objects).
+        - "notable_omissions": List of strings (From Comparison 'omissions').
+        - "claims": List of strings (From Analysis 'factual_claims').
+        - "score": Float (0-100, where 100 is neutral/complete).
+        - "score_explanation": String (Why this score?).
+        - "objectivity_level": {{ "assessment": "...", "range": "...", "confidence": "...", "definitions": "..." }}
+        """
+        return self._call_model(prompt)
+
+    def run(self, text):
+        # 1. Analyze
+        s1 = self.step_1_analyze_content(text)
+        print("   [Rate Limit] Pausing 60s to respect free tier quota...")
+        time.sleep(60)
+        
+        # 2. Context
+        s2 = self.step_2_get_context(s1)
+        print("   [Rate Limit] Pausing 60s to respect free tier quota...")
+        time.sleep(60)
+        
+        # 3. Compare
+        s3 = self.step_3_compare(s1, s2)
+        print("   [Rate Limit] Pausing 60s to respect free tier quota...")
+        time.sleep(60)
+        
+        # 4. Synthesize
+        final_output = self.step_4_synthesize(s1, s2, s3, text)
+        
+        # Save raw traces for debugging
+        self._log_trace(s1, s2, s3, final_output)
+        
+        return final_output
+
+    def _log_trace(self, s1, s2, s3, final):
         try:
             log_dir = os.path.join(os.getcwd(), "raw_responses")
             os.makedirs(log_dir, exist_ok=True)
             timestamp = int(time.time())
-            log_file = os.path.join(log_dir, f"response_{timestamp}.json")
-            with open(log_file, "w", encoding="utf-8") as f:
-                f.write(result_text)
-            print(f"Raw response saved to: {log_file}")
+            trace = {
+                "1_analysis": s1,
+                "2_context": s2,
+                "3_comparison": s3,
+                "4_final": final
+            }
+            with open(os.path.join(log_dir, f"trace_{timestamp}.json"), "w", encoding="utf-8") as f:
+                json.dump(trace, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"Warning: Failed to log raw response: {e}")
+            print(f"Failed to log trace: {e}")
 
-        data = json.loads(result_text.strip())
-        
-        # --- Score Calculation ---
-        factual_claims = data.get('claims', [])
-        subjective_claims_data = data.get('subjective_claims', {})
-        
-        # Calculate Wf (Word count of Factual Claims)
-        wf = sum(len(claim.split()) for claim in factual_claims)
-        
-        # Calculate Ws * I (Weighted Subjective Word Count)
-        # Intensity: Mild=1.0, Moderate=1.5, Severe=2.0
-        ws_weighted_sum = 0
-        
-        # Flatten the dictionary to iterate over all claims for scoring
-        all_subjective_items = []
-        if isinstance(subjective_claims_data, dict):
-            for technique, items in subjective_claims_data.items():
-                if isinstance(items, list):
-                    all_subjective_items.extend(items)
-        elif isinstance(subjective_claims_data, list):
-            all_subjective_items = subjective_claims_data
+# --- Main Entry Point ---
 
-        for claim_obj in all_subjective_items:
-            if isinstance(claim_obj, dict):
-                content = claim_obj.get('quote', '')
-                severity = claim_obj.get('severity', 'Mild').lower()
-                
-                if 'severe' in severity:
-                    intensity = 2.0
-                elif 'moderate' in severity:
-                    intensity = 1.5
-                else:
-                    intensity = 1.0
-            else:
-                content = str(claim_obj)
-                intensity = 1.0 # Default
-                lower_claim = content.lower()
-                if '[severe]' in lower_claim:
-                    intensity = 2.0
-                    content = content.replace('[Severe]', '').replace('[severe]', '')
-                elif '[moderate]' in lower_claim:
-                    intensity = 1.5
-                    content = content.replace('[Moderate]', '').replace('[moderate]', '')
-                elif '[mild]' in lower_claim:
-                    intensity = 1.0
-                    content = content.replace('[Mild]', '').replace('[mild]', '')
-                
-            word_count = len(content.split())
-            ws_weighted_sum += (word_count * intensity)
-            
-        # Formula: (Wf / (Wf + (Ws * I))) * 100
-        denominator = wf + ws_weighted_sum
+def analyze_article(text):
+    """
+    Orchestrator function that replaces the old monolithic one.
+    """
+    # MOCK MODE TOGGLE (Set to True to skip API during dev repetitions if needed)
+    # USE_MOCK = True 
+    
+    # if USE_MOCK:
+    #     # Returns the previous static mock data
+    #     time.sleep(1.0)
+    #     return get_mock_data()
         
-        if denominator == 0:
-            final_score = 0.0 # Edge case: empty text
-        else:
-            final_score = (wf / denominator) * 100
-            
-        data['score'] = round(final_score, 1)
-        data['score_explanation'] = f"Wf ({wf}) / (Wf ({wf}) + Weighted Ws ({ws_weighted_sum})) * 100"
-        
-        # --- Bucket Logic for Levels ---
-        s = final_score
-        if s <= 20:
-            assessment = "Very Low"
-            r_range = "0 – 20"
-            definition = "Dominated by rhetoric, emotive framing, and evaluative language"
-        elif s <= 40:
-            assessment = "Low"
-            r_range = "21 – 40"
-            definition = "Frequent subjective framing; facts are present but subordinated"
-        elif s <= 60:
-            assessment = "Moderate"
-            r_range = "41 – 60"
-            definition = "Mix of factual reporting and interpretative language"
-        elif s <= 80:
-            assessment = "High"
-            r_range = "61 – 80"
-            definition = "Largely factual with limited rhetorical framing"
-        else:
-            assessment = "Very High"
-            r_range = "81 – 100"
-            definition = "Primarily descriptive; minimal evaluative or emotive language"
-            
-        # --- Confidence Heuristic ---
-        # Based on length of analyzed text (approximation) and presence of extracted signals
-        text_len = len(text)
-        claims_count = len(factual_claims) + len(all_subjective_items)
-        
-        if text_len > 1500 and claims_count > 5:
-            confidence = "High"
-        elif text_len < 500 or claims_count < 3:
-            confidence = "Low"
-        else:
-            confidence = "Medium"
-            
-        data['objectivity_level'] = {
-            "assessment": assessment,
-            "range": r_range,
-            "confidence": confidence,
-            "definitions": definition
-        }
-        
-        return data
-        
+    try:
+        agent = MultiAgentAnalyzer()
+        return agent.run(text)
     except Exception as e:
-        raise Exception(f"Analysis failed: {str(e)}")
+        print(f"Analysis Error: {e}")
+        # Fallback to mock if API fails? Or re-raise?
+        # For now, let's re-raise to see the error.
+        raise e
+
