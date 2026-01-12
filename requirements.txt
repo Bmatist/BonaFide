@@ -8,3 +8,4 @@ uvicorn
 jinja2
 python-multipart
 newspaper3k
+tavily-python

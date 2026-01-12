@@ -4,16 +4,22 @@ import time
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+from tavily import TavilyClient
 
 # Load environment variables
 load_dotenv()
 
 class MultiAgentAnalyzer:
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        tavily_key = os.getenv("TAVILY_API_KEY")
+        if not gemini_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables.")
-        self.client = genai.Client(api_key=api_key)
+        if not tavily_key:
+             print("Warning: TAVILY_API_KEY not found. RAG will be disabled.")
+        
+        self.client = genai.Client(api_key=gemini_key)
+        self.tavily = TavilyClient(api_key=tavily_key) if tavily_key else None
         self.model = 'gemini-3-flash-preview' # Using Flash for speed in multi-step
 
     def _call_model(self, prompt, response_schema=None):
@@ -31,6 +37,23 @@ class MultiAgentAnalyzer:
         except Exception as e:
             print(f"Model call failed: {e}")
             return {}
+
+    def _search_tavily(self, query):
+        """Perform search to get real-world context snippets."""
+        print(f"   [Step 1.5] Searching for context: {query}...")
+        try:
+            # Get search results with snippets
+            results = self.tavily.search(query=query, search_depth="advanced", max_results=5)
+            snippets = []
+            for res in results.get('results', []):
+                snippets.append(f"Source: {res['url']}\nContent: {res['content']}\n")
+            return {
+                "snippets": "\n".join(snippets),
+                "raw": results
+            }
+        except Exception as e:
+            print(f"Tavily search failed: {e}")
+            return {"snippets": "Search failed.", "raw": None}
 
     def step_1_analyze_content(self, text):
         """
@@ -53,26 +76,29 @@ class MultiAgentAnalyzer:
         """
         return self._call_model(prompt)
 
-    def step_2_get_context(self, analysis_data):
+    def step_2_get_context(self, analysis_data, search_results):
         """
-        Role: The Historian (Blind Context Retrieval)
-        Goal: Retrieve standard perspectives on the topic WITHOUT seeing the article.
+        Role: The Historian (Knowledge Retrieval)
+        Goal: Retrieve standard perspectives grounded in real-world data.
         """
-        print("   [Step 2/4] Retrieving Context...")
+        print("   [Step 2/4] Retrieving Context (RAG)...")
         topic = analysis_data.get("main_topic", "General News")
         entities = analysis_data.get("key_entities", [])
         
         prompt = f"""
         Role: Political Historian / Context Specialist.
-        Task: List the standard, multi-perspective viewpoints associated with this topic.
+        Task: Based on the provided search results and your knowledge, list the standard viewpoints on this topic.
         
         Topic: {topic}
         Key Entities: {', '.join(entities[:5])}
 
+        Retrieved Context Snippets:
+        {search_results}
+
         Output JSON with keys:
-        - "standard_viewpoints": List of strings (The 3-4 major stances on this issue, e.g., Pro-Gov, Opposition, International Law).
-        - "key_historical_facts": List of strings (Indisputable facts usually cited in comprehensive coverage).
-        - "controversies": List of strings (The usual points of contention).
+        - "standard_viewpoints": List of strings (The major stances, grounded in the search snippets).
+        - "key_historical_facts": List of strings (Facts confirmed by the snippets or standard knowledge).
+        - "controversies": List of strings (The points of friction identified).
         """
         return self._call_model(prompt)
 
@@ -130,37 +156,85 @@ class MultiAgentAnalyzer:
         """
         return self._call_model(prompt)
 
+    def _get_objectivity_level(self, score):
+        """Maps a numeric score to its textual bucket."""
+        s = float(score)
+        if s <= 20:
+            return {
+                "assessment": "Very Low",
+                "range": "0 – 20",
+                "definitions": "Dominated by rhetoric, emotive framing, and evaluative language"
+            }
+        elif s <= 40:
+            return {
+                "assessment": "Low",
+                "range": "21 – 40",
+                "definitions": "Frequent subjective framing; facts are present but subordinated"
+            }
+        elif s <= 60:
+            return {
+                "assessment": "Moderate",
+                "range": "41 – 60",
+                "definitions": "Mix of factual reporting and interpretative language"
+            }
+        elif s <= 80:
+            return {
+                "assessment": "High",
+                "range": "61 – 80",
+                "definitions": "Largely factual with limited rhetorical framing"
+            }
+        else:
+            return {
+                "assessment": "Very High",
+                "range": "81 – 100",
+                "definitions": "Primarily descriptive; minimal evaluative or emotive language"
+            }
+
     def run(self, text):
         # 1. Analyze
         s1 = self.step_1_analyze_content(text)
-        print("   [Rate Limit] Pausing 60s to respect free tier quota...")
-        time.sleep(60)
+        time.sleep(1)
         
+        # 1.5 Search (RAG)
+        # Search for the main topic and entities
+        search_query = f"{s1.get('main_topic', '')} perspective controversy"
+        search_data = self._search_tavily(search_query)
+        s1_5_snippets = search_data["snippets"]
+        s1_5_raw = search_data["raw"]
+
         # 2. Context
-        s2 = self.step_2_get_context(s1)
-        print("   [Rate Limit] Pausing 60s to respect free tier quota...")
-        time.sleep(60)
+        s2 = self.step_2_get_context(s1, s1_5_snippets)
+        time.sleep(1)
         
         # 3. Compare
         s3 = self.step_3_compare(s1, s2)
-        print("   [Rate Limit] Pausing 60s to respect free tier quota...")
-        time.sleep(60)
+        time.sleep(1)
         
         # 4. Synthesize
         final_output = self.step_4_synthesize(s1, s2, s3, text)
         
+        # Ensure consistency regardless of model's internal logic
+        score = final_output.get('score', 50.0)
+        level_data = self._get_objectivity_level(score)
+        
+        # Preserve confidence from model, but override labels
+        model_level = final_output.get('objectivity_level', {})
+        level_data['confidence'] = model_level.get('confidence', 'Medium')
+        final_output['objectivity_level'] = level_data
+
         # Save raw traces for debugging
-        self._log_trace(s1, s2, s3, final_output)
+        self._log_trace(s1, s1_5_raw, s2, s3, final_output)
         
         return final_output
 
-    def _log_trace(self, s1, s2, s3, final):
+    def _log_trace(self, s1, s1_5, s2, s3, final):
         try:
             log_dir = os.path.join(os.getcwd(), "raw_responses")
             os.makedirs(log_dir, exist_ok=True)
             timestamp = int(time.time())
             trace = {
                 "1_analysis": s1,
+                "1_5_search": s1_5,
                 "2_context": s2,
                 "3_comparison": s3,
                 "4_final": final
@@ -170,26 +244,21 @@ class MultiAgentAnalyzer:
         except Exception as e:
             print(f"Failed to log trace: {e}")
 
-# --- Main Entry Point ---
 
 def analyze_article(text):
     """
     Orchestrator function that replaces the old monolithic one.
     """
-    # MOCK MODE TOGGLE (Set to True to skip API during dev repetitions if needed)
-    # USE_MOCK = True 
+    # USE_MOCK = True
     
     # if USE_MOCK:
-    #     # Returns the previous static mock data
     #     time.sleep(1.0)
     #     return get_mock_data()
-        
+
     try:
         agent = MultiAgentAnalyzer()
         return agent.run(text)
     except Exception as e:
         print(f"Analysis Error: {e}")
-        # Fallback to mock if API fails? Or re-raise?
-        # For now, let's re-raise to see the error.
         raise e
 
