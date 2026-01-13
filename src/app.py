@@ -21,8 +21,21 @@ app = FastAPI(title="Political Bias Detector")
 # Mount static files
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
+from urllib.parse import urlparse
+
 # Templates
 templates = Jinja2Templates(directory="src/templates")
+
+def get_domain(url: str):
+    try:
+        domain = urlparse(url).netloc
+        if domain.startswith('www.'):
+            domain = domain[4:]
+        return domain
+    except:
+        return "source"
+
+templates.env.filters["domain"] = get_domain
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

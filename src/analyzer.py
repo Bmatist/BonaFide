@@ -76,82 +76,84 @@ class MultiAgentAnalyzer:
         """
         return self._call_model(prompt)
 
-    def step_2_get_context(self, analysis_data, search_results):
+    def step_2_get_context(self, text, search_results):
         """
-        Role: The Historian (Knowledge Retrieval)
-        Goal: Retrieve standard perspectives grounded in real-world data.
+        Role: The Researcher (RAG Context)
         """
-        print("   [Step 2/4] Retrieving Context (RAG)...")
-        topic = analysis_data.get("main_topic", "General News")
-        entities = analysis_data.get("key_entities", [])
-        
+        print("   [Step 2/4] Retrieving Global Context...")
         prompt = f"""
-        Role: Political Historian / Context Specialist.
-        Task: Based on the provided search results and your knowledge, list the standard viewpoints on this topic.
+        Role: Neutral Context Researcher.
+        Task: Provide missing context for the article based on external search results.
         
-        Topic: {topic}
-        Key Entities: {', '.join(entities[:5])}
+        Article Summary/Topic: {text[:2000]}
+        
+        Search Results (Context):
+        {json.dumps(search_results, indent=2)}
 
-        Retrieved Context Snippets:
-        {search_results}
+        Requirement: Identify critical facts, events, or perspectives NOT in the article.
+        For each point, identify the 'source_url' from the search results provided.
 
         Output JSON with keys:
-        - "standard_viewpoints": List of strings (The major stances, grounded in the search snippets).
-        - "key_historical_facts": List of strings (Facts confirmed by the snippets or standard knowledge).
-        - "controversies": List of strings (The points of friction identified).
+        - "broader_context": String (Historical/Geopolitical background).
+        - "competing_narratives": List of strings (Alternative ways this story is told).
+        - "external_facts": List of {{'fact': string, 'source_url': string}} (Specific data points found).
         """
         return self._call_model(prompt)
 
-    def step_3_compare(self, analysis_data, context_data):
+    def step_3_compare(self, analysis, context):
         """
-        Role: The Judge (Gap Analysis)
-        Goal: Compare what was specific in the article vs what exists in the world.
+        Role: The Fact-Checker (Bias by Omission)
         """
-        print("   [Step 3/4] Comparing & Detecting Bias...")
+        print("   [Step 3/4] Comparing Content vs Context...")
         prompt = f"""
-        Role: Bias Comparator.
-        Task: Compare the Article's content against the Standard Context to find Omissions and Framing.
+        Role: Comparative Analyst.
+        Task: Identify 'Bias by Omission' by comparing what was reported vs what exists in context.
 
-        Article Narrative: {analysis_data.get('narrative_arc')}
-        Article Claims: {json.dumps(analysis_data.get('factual_claims', []))}
+        Internal Reporting: {json.dumps(analysis, indent=2)}
+        External Context: {json.dumps(context, indent=2)}
 
-        Standard Context: {json.dumps(context_data.get('standard_viewpoints', []))}
-        Standard Facts: {json.dumps(context_data.get('key_historical_facts', []))}
+        Requirement: Be specific about what was LEFT OUT and provide the source_url for each omission.
 
         Output JSON with keys:
-        - "omissions": List of strings (Important context or facts from Standard Context NOT present in Article).
-        - "framing_bias": List of strings (How the article's narrative deviates from a neutral stance).
-        - "ideological_stance": Object {{ "National": "...", "Diplomatic": "...", "Conflict": "..." }}
+        - "omissions": List of {{'omission': string, 'details': string, 'source_url': string}}.
+        - "framing_bias": List of strings (How the article slants what it DOES include).
+        - "ideological_stance": Dictionary (How do they view the conflict/topic?).
         """
         return self._call_model(prompt)
 
-    def step_4_synthesize(self, analysis_data, context_data, comparison_data, original_text):
+    def step_4_synthesize(self, analysis, context, comparison, original_text):
         """
-        Role: The Narrator (Final Formatting)
-        Goal: Format the data into the structure required by the frontend.
+        Role: The Narrator (Final Report)
         """
         print("   [Step 4/4] Synthesizing Final Report...")
         prompt = f"""
-        Role: Final Report Editor.
-        Task: Synthesize the findings into a structured report for the UI.
-
-        Analysis: {json.dumps(analysis_data)}
-        Comparison: {json.dumps(comparison_data)}
-        Context: {json.dumps(context_data)}
-        Original Text Snippet: {original_text[:1000]}
+        Role: Senior Analytical Narrator.
+        Task: Create a final, polished report of bias.
+        
+        Input Data for Synthesis:
+        1. Initial Analysis: {json.dumps(analysis, indent=2)}
+        2. External Context: {json.dumps(context, indent=2)}
+        3. Gap Comparison: {json.dumps(comparison, indent=2)}
+        
+        Reference Text: {original_text[:2000]}
 
         Requirements:
-        1. "subjective_claims": Group by Rhetorical Technique (e.g., "Adversarial Framing", "Emotive Intensification"). keys=Technique, value=List of {{severity, quote, analysis}}.
-        2. "objectivity_level": Assess based on the ratio of Omissions/Framing.
+        1. "subjective_claims": Use the Reference Text to find quotes that support the Framing Bias identified in Comparison. Group by Rhetorical Technique. 
+           Each object MUST include:
+           - severity: "Mild", "Moderate", or "Severe"
+           - quote_original: The verbatim quote in the article's language.
+           - quote_translated: English translation.
+           - analysis: A brief explanation of why this quote is biased.
+        2. "notable_omissions": Merge information from 'External Context' and 'Gap Comparison'. Provide {{'text': string, 'url': string}}.
 
         Output JSON with keys:
         - "ideological_dimensions": (From Comparison)
         - "narrative_alignment": List of strings (The specific narrative the article pushes).
-        - "subjective_claims": Dictionary (Technique -> List of objects).
-        - "notable_omissions": List of strings (From Comparison 'omissions').
+        - "subjective_claims": Dictionary (Technique -> List of objects with severity, quote_original, quote_translated, and analysis).
+        - "notable_omissions": List of objects (text and url).
         - "claims": List of strings (From Analysis 'factual_claims').
         - "score": Float (0-100, where 100 is neutral/complete).
-        - "score_explanation": String (Why this score?).
+        - "score_explanation": String (Brief reasoning for the score).
         - "objectivity_level": {{ "assessment": "...", "range": "...", "confidence": "...", "definitions": "..." }}
         """
         return self._call_model(prompt)
@@ -203,7 +205,7 @@ class MultiAgentAnalyzer:
         s1_5_raw = search_data["raw"]
 
         # 2. Context
-        s2 = self.step_2_get_context(s1, s1_5_snippets)
+        s2 = self.step_2_get_context(text, s1_5_snippets)
         time.sleep(1)
         
         # 3. Compare

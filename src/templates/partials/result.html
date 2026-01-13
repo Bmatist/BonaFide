@@ -132,54 +132,73 @@
 
 
 
-    {% if analysis.subjective_claims %}
-    <div class="details-section">
-        <h3>Subjective Claims (Evidence of Bias)</h3>
-        <ul class="claims-list subjective">
-            {% if analysis.subjective_claims is mapping %}
-            {% for technique, claims in analysis.subjective_claims.items() %}
-            <li class="technique-group">
-                <h4>{{ technique }}</h4>
-                <ul class="sub-claims-list">
-                    {% for item in claims %}
-                    <li class="claim-item">
-                        <span class="severity-tag {{ item.severity|lower }}">{{ item.severity }}</span>
-                        <span class="claim-quote">"{{ item.quote }}"</span>
-                        <span class="claim-analysis">— {{ item.analysis }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </li>
-            {% endfor %}
-            {% else %}
-            <!-- Fallback for old list format -->
-            {% for claim in analysis.subjective_claims %}
-            <li>{{ claim }}</li>
-            {% endfor %}
-            {% endif %}
-        </ul>
-    </div>
-    {% endif %}
+    <div class="details-grid">
+        {% if analysis.subjective_claims %}
+        <div class="details-section">
+            <h3>Subjective Claims (Evidence of Bias)</h3>
+            <ul class="claims-list subjective">
+                {% if analysis.subjective_claims is mapping %}
+                {% for technique, claims in analysis.subjective_claims.items() %}
+                <li class="technique-group">
+                    <h4>{{ technique }}</h4>
+                    <ul class="sub-claims-list">
+                        {% for item in claims %}
+                        <li class="claim-item">
+                            <span class="severity-tag {{ item.severity|lower }}">{{ item.severity }}</span>
+                            <div class="quote-group">
+                                {% if item.quote_original %}
+                                <span class="claim-quote original">"{{ item.quote_original }}"</span>
+                                <span class="quote-sep">→</span>
+                                <span class="claim-quote translated">"{{ item.quote_translated }}"</span>
+                                {% else %}
+                                <span class="claim-quote">"{{ item.quote }}"</span>
+                                {% endif %}
+                            </div>
+                            <span class="claim-analysis">— {{ item.analysis }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                {% endfor %}
+                {% else %}
+                <!-- Fallback for old list format -->
+                {% for claim in analysis.subjective_claims %}
+                <li>{{ claim }}</li>
+                {% endfor %}
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
 
-    {% if analysis.claims %}
-    <div class="details-section">
-        <h3>Factual Claims (Extracted)</h3>
-        <ul class="claims-list factual">
-            {% for claim in analysis.claims %}
-            <li>{{ claim }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+        {% if analysis.claims %}
+        <div class="details-section">
+            <h3>Factual Claims (Extracted)</h3>
+            <ul class="claims-list factual">
+                {% for claim in analysis.claims %}
+                <li>{{ claim }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
 
-    {% if analysis.notable_omissions %}
-    <div class="details-section">
-        <h3>Counterfactual Context & Notable Omissions</h3>
-        <ul class="claims-list">
-            {% for omission in analysis.notable_omissions %}
-            <li>{{ omission }}</li>
-            {% endfor %}
-        </ul>
+        {% if analysis.notable_omissions %}
+        <div class="details-section">
+            <h3>Counterfactual Context & Omissions</h3>
+            <ul class="claims-list omissions">
+                {% for item in analysis.notable_omissions %}
+                <li>
+                    {% if item is mapping %}
+                    <span class="omission-text">{{ item.text }}</span>{% if item.url %}<a href="{{ item.url }}"
+                        target="_blank" class="source-link" title="Verify source">
+                        <span class="link-icon">↗</span> {{ item.url | domain }}
+                    </a>{% endif %}
+                    {% else %}
+                    {{ item }}
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
