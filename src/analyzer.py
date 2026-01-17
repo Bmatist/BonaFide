@@ -112,10 +112,20 @@ class MultiAgentAnalyzer:
         Internal Reporting: {json.dumps(analysis, indent=2)}
         External Context: {json.dumps(context, indent=2)}
 
-        Requirement: Be specific about what was LEFT OUT and provide the source_url for each omission.
+        Requirement: 
+        1. Be specific about what was LEFT OUT and provide the source_url for each omission.
+        2. Verify the 'factual_claims' from Internal Reporting against the External Context. Assign a status: "Verified", "Disputed", "Single Source", or "Unverified".
+
+        3. Perform Narrative Fingerprinting:
+           - First, identify the geopolitical Region/Context (e.g. MENA, Latin America, US Domestic).
+           - Identify the 'Editorial Ecosystem' this text most closely resembles within that region. 
+           - **CRITICAL**: In 'closest_match', provide names of notable worldwide media that align with the same speech, framing template, or style (e.g. 'Western-Liberal / Critical Opposition (NYT, The Guardian)', 'State-Adjacent (RT, CCTV, Al Arabiya)', 'Pan-Arabist (Al Jazeera)', 'Populist-Nativist (Fox News)').
+           - Identify specific 'shared traits' (vocabulary, framing, omission patterns).
 
         Output JSON with keys:
+        - "editorial_proximity": {{'region': string, 'closest_match': string (Must include specific media names as examples), 'shared_traits': List[string]}}.
         - "omissions": List of {{'omission': string, 'details': string, 'source_url': string}}.
+        - "verified_claims": List of {{'claim': string, 'status': string, 'support': string}}.
         - "framing_bias": List of strings (How the article slants what it DOES include).
         - "ideological_stance": Dictionary (How do they view the conflict/topic?).
         """
@@ -145,14 +155,22 @@ class MultiAgentAnalyzer:
            - quote_translated: English translation.
            - analysis: A brief explanation of why this quote is biased.
         2. "notable_omissions": Merge information from 'External Context' and 'Gap Comparison'. Provide {{'text': string, 'url': string}}.
+        3. "claims": Use the 'verified_claims' from Gap Comparison. transform to list of objects including status and support.
+        4. "editorial_proximity": Pass through from Comparison step.
 
         Output JSON with keys:
         - "ideological_dimensions": (From Comparison)
         - "narrative_alignment": List of strings (The specific narrative the article pushes).
         - "subjective_claims": Dictionary (Technique -> List of objects with severity, quote_original, quote_translated, and analysis).
         - "notable_omissions": List of objects (text and url).
-        - "claims": List of strings (From Analysis 'factual_claims').
+        - "claims": List of objects (text, confidence, support).
+        - "editorial_proximity": {{'region': string, 'closest_match': string (Ensure specific media names are included), 'shared_traits': List[string]}}.
         - "score": Float (0-100, where 100 is neutral/complete).
+        - "score_breakdown": {{
+            "completeness": int, (0-100: penalty for omissions)
+            "neutrality": int, (0-100: penalty for subjective/loaded language)
+            "factuality": int (0-100: penalty for disputed/unverified claims)
+          }}
         - "score_explanation": String (Brief reasoning for the score).
         - "objectivity_level": {{ "assessment": "...", "range": "...", "confidence": "...", "definitions": "..." }}
         """
@@ -192,14 +210,22 @@ class MultiAgentAnalyzer:
                 "definitions": "Primarily descriptive; minimal evaluative or emotive language"
             }
 
-    def run(self, text):
+    def run(self, text, url=None):
         # 1. Analyze
         s1 = self.step_1_analyze_content(text)
+        
+        if isinstance(s1, list):
+            if len(s1) > 0:
+                s1 = s1[0]
+            else:
+                s1 = {}
+        
         time.sleep(1)
         
         # 1.5 Search (RAG)
         # Search for the main topic and entities
-        search_query = f"{s1.get('main_topic', '')} perspective controversy"
+        topic = s1.get('main_topic', 'political news')
+        search_query = f"{topic} perspective controversy"
         search_data = self._search_tavily(search_query)
         s1_5_snippets = search_data["snippets"]
         s1_5_raw = search_data["raw"]
@@ -215,6 +241,12 @@ class MultiAgentAnalyzer:
         # 4. Synthesize
         final_output = self.step_4_synthesize(s1, s2, s3, text)
         
+        if isinstance(final_output, list):
+            if len(final_output) > 0:
+                final_output = final_output[0]
+            else:
+                final_output = {}
+        
         # Ensure consistency regardless of model's internal logic
         score = final_output.get('score', 50.0)
         level_data = self._get_objectivity_level(score)
@@ -225,16 +257,17 @@ class MultiAgentAnalyzer:
         final_output['objectivity_level'] = level_data
 
         # Save raw traces for debugging
-        self._log_trace(s1, s1_5_raw, s2, s3, final_output)
+        self._log_trace(s1, s1_5_raw, s2, s3, final_output, url)
         
         return final_output
 
-    def _log_trace(self, s1, s1_5, s2, s3, final):
+    def _log_trace(self, s1, s1_5, s2, s3, final, url=None):
         try:
             log_dir = os.path.join(os.getcwd(), "raw_responses")
             os.makedirs(log_dir, exist_ok=True)
             timestamp = int(time.time())
             trace = {
+                "url": url,
                 "1_analysis": s1,
                 "1_5_search": s1_5,
                 "2_context": s2,
@@ -247,7 +280,7 @@ class MultiAgentAnalyzer:
             print(f"Failed to log trace: {e}")
 
 
-def analyze_article(text):
+def analyze_article(text, url=None):
     """
     Orchestrator function that replaces the old monolithic one.
     """
@@ -259,7 +292,7 @@ def analyze_article(text):
 
     try:
         agent = MultiAgentAnalyzer()
-        return agent.run(text)
+        return agent.run(text, url)
     except Exception as e:
         print(f"Analysis Error: {e}")
         raise e

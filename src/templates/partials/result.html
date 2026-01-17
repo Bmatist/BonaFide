@@ -4,99 +4,72 @@
     </div>
 
     <div class="analysis-grid">
-        <!-- Left Panel: Objectivity Assessment -->
-        <div class="left-panel">
-            <div class="stat-box assessment-card">
-                <h3>Objectivity Assessment</h3>
-
-                {% if analysis.objectivity_level %}
-                <div class="gauge-container">
-                    <!-- Semi-circle Gauge SVG -->
-                    <!-- ViewBox: Expanded to -25..225 x 0..130 to move text below pivot (y=100). -->
-                    <svg class="gauge-svg" viewBox="-25 0 250 130">
-                        <!-- Segments: 5 segments of 36 degrees each. Radius 70 (Outer edge ~80 with stroke 20) -->
-                        <!-- Center 100,100 -->
-
-                        <!-- Very Low (Red): 180 -> 144 deg -->
-                        <path d="M 30,100 A 70,70 0 0 1 43.4,58.9" fill="none" stroke="#ef4444" stroke-width="20" />
-
-                        <!-- Low (Orange): 144 -> 108 deg -->
-                        <path d="M 43.4,58.9 A 70,70 0 0 1 78.4,33.4" fill="none" class="gauge-segment low"
-                            stroke="#f97316" stroke-width="20" />
-
-                        <!-- Moderate (Yellow): 108 -> 72 deg -->
-                        <path d="M 78.4,33.4 A 70,70 0 0 1 121.6,33.4" fill="none" class="gauge-segment moderate"
-                            stroke="#eab308" stroke-width="20" />
-
-                        <!-- High (Lime): 72 -> 36 deg -->
-                        <path d="M 121.6,33.4 A 70,70 0 0 1 156.6,58.9" fill="none" class="gauge-segment high"
-                            stroke="#84cc16" stroke-width="20" />
-
-                        <!-- Very High (Green): 36 -> 0 deg -->
-                        <path d="M 156.6,58.9 A 70,70 0 0 1 170,100" fill="none" class="gauge-segment very-high"
-                            stroke="#22c55e" stroke-width="20" />
-
-                        <!-- Labels Outside Segments (Radius ~95/100) -->
-                        <text x="10" y="75" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
-                            text-anchor="end">V. Low</text>
-                        <text x="45" y="25" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
-                            text-anchor="end">Low</text>
-                        <text x="100" y="8" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
-                            text-anchor="middle">Mod</text>
-                        <text x="155" y="25" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
-                            text-anchor="start">High</text>
-                        <text x="190" y="75" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
-                            text-anchor="start">V. High</text>
-
-                        <!-- Needle -->
-                        <g class="needle-group"
-                            style="transform: rotate({{ (analysis.score|float / 100 * 180) - 90 }}deg); transform-origin: 100px 100px;">
-                            <!-- Shortened needle to fit smaller radius -->
-                            <path d="M 100,100 L 100,35" class="needle-path" stroke="#333" stroke-width="4"
-                                stroke-linecap="round" />
-                            <circle cx="100" cy="100" r="6" fill="#333" />
-                        </g>
-                    </svg>
-
-                </div>
-
-                <div class="current-assessment-container"
-                    style="text-align: center; margin-top: -5px; margin-bottom: 15px;">
-                    <div class="current-assessment"
-                        style="color: var(--text-main); font-weight: 800; font-size: 1.1em;">
-                        {{ analysis.objectivity_level.assessment }}
-                    </div>
-                </div>
-
-                <div class="level-meta compact"
-                    style="margin-top: 5px; text-align: center; display: flex; flex-direction: column; gap: 4px;">
-                    <div class="meta-row centered">
-                        <span class="label">Range:</span>
-                        <span class="val">{{ analysis.objectivity_level.range }}</span>
-                    </div>
-                    <!-- <span class="sep" style="margin: 0 5px; color: #ccc;">|</span> -->
-                    <div class="meta-row centered">
-                        <span class="label">Confidence:</span>
-                        <span class="val">
-                            {{ analysis.objectivity_level.confidence }}
-                            <div class="tooltip-wrapper">
-                                <span class="info-icon">i</span>
-                                <div class="tooltip-content">Based on article length and density of claims.</div>
-                            </div>
-                        </span>
-                    </div>
-                </div>
-                {% else %}
-                <div class="score-value">{{ analysis.score }}<span class="total">/100</span></div>
-                <div class="score-bar">
-                    <div class="fill" style="width: {{ analysis.score }}%;"></div>
-                </div>
-                {% endif %}
+        <!-- Row 1 Left: Objectivity Assessment -->
+        <div class="stat-box assessment-card">
+            <h3>Objectivity Assessment</h3>
+            {% if analysis.objectivity_level %}
+            <div class="gauge-container">
+                <svg class="gauge-svg" viewBox="-25 0 250 130">
+                    <path d="M 30,100 A 70,70 0 0 1 43.4,58.9" fill="none" stroke="#ef4444" stroke-width="20" />
+                    <path d="M 43.4,58.9 A 70,70 0 0 1 78.4,33.4" fill="none" class="gauge-segment low" stroke="#f97316"
+                        stroke-width="20" />
+                    <path d="M 78.4,33.4 A 70,70 0 0 1 121.6,33.4" fill="none" class="gauge-segment moderate"
+                        stroke="#eab308" stroke-width="20" />
+                    <path d="M 121.6,33.4 A 70,70 0 0 1 156.6,58.9" fill="none" class="gauge-segment high"
+                        stroke="#84cc16" stroke-width="20" />
+                    <path d="M 156.6,58.9 A 70,70 0 0 1 170,100" fill="none" class="gauge-segment very-high"
+                        stroke="#22c55e" stroke-width="20" />
+                    <text x="10" y="75" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                        text-anchor="end">V. Low</text>
+                    <text x="45" y="25" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                        text-anchor="end">Low</text>
+                    <text x="100" y="8" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                        text-anchor="middle">Mod</text>
+                    <text x="155" y="25" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                        text-anchor="start">High</text>
+                    <text x="190" y="75" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
+                        text-anchor="start">V. High</text>
+                    <g class="needle-group"
+                        style="transform: rotate({{ (analysis.score|float / 100 * 180) - 90 }}deg); transform-origin: 100px 100px;">
+                        <path d="M 100,100 L 100,35" class="needle-path" stroke="#333" stroke-width="4"
+                            stroke-linecap="round" />
+                        <circle cx="100" cy="100" r="6" fill="#333" />
+                    </g>
+                </svg>
             </div>
+            <div class="current-assessment-container"
+                style="text-align: center; margin-top: -5px; margin-bottom: 15px;">
+                <div class="current-assessment" style="color: var(--text-main); font-weight: 800; font-size: 1.1em;">
+                    {{ analysis.objectivity_level.assessment }}
+                </div>
+            </div>
+            <div class="level-meta compact"
+                style="margin-top: 5px; text-align: center; display: flex; flex-direction: column; gap: 4px;">
+                <div class="meta-row centered">
+                    <span class="label">Range:</span>
+                    <span class="val">{{ analysis.objectivity_level.range }}</span>
+                </div>
+                <div class="meta-row centered">
+                    <span class="label">Confidence:</span>
+                    <span class="val">
+                        {{ analysis.objectivity_level.confidence }}
+                        <div class="tooltip-wrapper">
+                            <span class="info-icon">i</span>
+                            <div class="tooltip-content">Based on article length and density of claims.</div>
+                        </div>
+                    </span>
+                </div>
+            </div>
+            {% else %}
+            <div class="score-value">{{ analysis.score }}<span class="total">/100</span></div>
+            <div class="score-bar">
+                <div class="fill" style="width: {{ analysis.score }}%;"></div>
+            </div>
+            {% endif %}
         </div>
 
-        <!-- Right Panel: Dimensions & Narrative -->
-        <div class="right-panel">
+        <!-- Row 1 Right: Dimensions & Narrative -->
+        <div class="top-details-group">
             <div class="stat-box">
                 <h3>Ideological Dimensions</h3>
                 <div class="dimensions-list">
@@ -112,7 +85,6 @@
                     {% endif %}
                 </div>
             </div>
-
             <div class="stat-box">
                 <h3>Narrative Alignment</h3>
                 <div class="narrative-list">
@@ -128,13 +100,97 @@
                 </div>
             </div>
         </div>
+
+        <!-- Row 2 Left: Score Components -->
+        {% if analysis.score_breakdown %}
+        <div class="stat-box breakdown-card">
+            <h3>Score Components</h3>
+            <div class="score-breakdown">
+                <div class="breakdown-item">
+                    <div class="breakdown-label">
+                        <span class="label-with-tooltip">
+                            Neutrality
+                            <div class="tooltip-wrapper">
+                                <span class="info-icon">i</span>
+                                <div class="tooltip-content">Evaluates the absence of loaded language, emotional
+                                    framing, and subjective reporting.</div>
+                            </div>
+                        </span>
+                        <span class="breakdown-val">{{ analysis.score_breakdown.neutrality }}%</span>
+                    </div>
+                    <div class="breakdown-bar">
+                        <div class="breakdown-fill"
+                            style="width: {{ analysis.score_breakdown.neutrality }}%; background: #f59e0b;"></div>
+                    </div>
+                </div>
+                <div class="breakdown-item">
+                    <div class="breakdown-label">
+                        <span class="label-with-tooltip">
+                            Factuality
+                            <div class="tooltip-wrapper">
+                                <span class="info-icon">i</span>
+                                <div class="tooltip-content">Assesses the verifiability and consensus of the article's
+                                    core factual claims against external sources.</div>
+                            </div>
+                        </span>
+                        <span class="breakdown-val">{{ analysis.score_breakdown.factuality }}%</span>
+                    </div>
+                    <div class="breakdown-bar">
+                        <div class="breakdown-fill"
+                            style="width: {{ analysis.score_breakdown.factuality }}%; background: #10b981;"></div>
+                    </div>
+                </div>
+                <div class="breakdown-item">
+                    <div class="breakdown-label">
+                        <span class="label-with-tooltip">
+                            Completeness
+                            <div class="tooltip-wrapper">
+                                <span class="info-icon">i</span>
+                                <div class="tooltip-content">Measures how much critical context from the broader global
+                                    narrative was included or omitted.</div>
+                            </div>
+                        </span>
+                        <span class="breakdown-val">{{ analysis.score_breakdown.completeness }}%</span>
+                    </div>
+                    <div class="breakdown-bar">
+                        <div class="breakdown-fill"
+                            style="width: {{ analysis.score_breakdown.completeness }}%; background: #8b5cf6;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Row 2 Right: Editorial DNA -->
+        {% if analysis.editorial_proximity %}
+        <div class="stat-box dna-card">
+            <h3>Editorial DNA / Ecosystem</h3>
+            <div class="dna-content">
+                <div class="dna-header">
+                    <div class="dna-match-row">
+                        <span class="dna-label">Proximity:</span>
+                        <span class="dna-value">{{ analysis.editorial_proximity.closest_match }}</span>
+                    </div>
+                    <div class="dna-region">{{ analysis.editorial_proximity.region }}</div>
+                </div>
+                <div class="dna-traits">
+                    <h4>Inherited Traits:</h4>
+                    <ul>
+                        {% for trait in analysis.editorial_proximity.shared_traits %}
+                        <li>{{ trait }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
 
 
     <div class="details-grid">
         {% if analysis.subjective_claims %}
-        <div class="details-section">
+        <div class="details-section theme-neutrality">
             <h3>Subjective Claims (Evidence of Bias)</h3>
             <ul class="claims-list subjective">
                 {% if analysis.subjective_claims is mapping %}
@@ -171,18 +227,30 @@
         {% endif %}
 
         {% if analysis.claims %}
-        <div class="details-section">
+        <div class="details-section theme-factuality">
             <h3>Factual Claims (Extracted)</h3>
             <ul class="claims-list factual">
                 {% for claim in analysis.claims %}
-                <li>{{ claim }}</li>
+                <li>
+                    {% if claim is mapping %}
+                    <div class="claim-header">
+                        <span class="verification-badge {{ claim.confidence|lower|replace(' ', '-') }}">{{
+                            claim.confidence }}</span>
+                    </div>
+                    <span class="claim-text">{{ claim.text }}</span>
+                    <div class="claim-support">{{ claim.support }}</div>
+                    {% else %}
+                    <!-- Support for old format -->
+                    {{ claim }}
+                    {% endif %}
+                </li>
                 {% endfor %}
             </ul>
         </div>
         {% endif %}
 
         {% if analysis.notable_omissions %}
-        <div class="details-section">
+        <div class="details-section theme-completeness">
             <h3>Counterfactual Context & Omissions</h3>
             <ul class="claims-list omissions">
                 {% for item in analysis.notable_omissions %}

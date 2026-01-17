@@ -48,7 +48,7 @@ async def analyze(request: Request, url: str = Form(...)):
         text = scrape_article(url)
         
         # Analyze
-        analysis = analyze_article(text)
+        analysis = analyze_article(text, url)
         
         return templates.TemplateResponse("partials/result.html", {
             "request": request, 
