@@ -7,6 +7,11 @@
         <!-- Row 1 Left: Objectivity Assessment -->
         <div class="stat-box assessment-card">
             <h3>Objectivity Assessment</h3>
+            {% if analysis.article_metadata %}
+            <div class="genre-container">
+                <span class="genre-badge">{{ analysis.article_metadata.genre }}</span>
+            </div>
+            {% endif %}
             {% if analysis.objectivity_level %}
             <div class="gauge-container">
                 <svg class="gauge-svg" viewBox="-25 0 250 130">
@@ -61,9 +66,17 @@
                 </div>
             </div>
             {% else %}
-            <div class="score-value">{{ analysis.score }}<span class="total">/100</span></div>
+            <div class="score-comparison">
+                {% if analysis.adjusted_score %}
+                <div class="adjusted-score">{{ analysis.adjusted_score }}<span class="total"
+                        style="font-size: 1rem;">/100</span></div>
+                <div class="raw-score-label">Raw Score: {{ analysis.score }}/100</div>
+                {% else %}
+                <div class="score-value">{{ analysis.score }}<span class="total">/100</span></div>
+                {% endif %}
+            </div>
             <div class="score-bar">
-                <div class="fill" style="width: {{ analysis.score }}%;"></div>
+                <div class="fill" style="width: {{ analysis.adjusted_score or analysis.score }}%;"></div>
             </div>
             {% endif %}
         </div>
@@ -158,6 +171,16 @@
                     </div>
                 </div>
             </div>
+            {% if analysis.reader_risk %}
+            <div class="reader-risk-card">
+                <div class="reader-risk-title">
+                    <span class="risk-icon">⚠️</span> Reader Risk
+                </div>
+                <div class="reader-risk-content">
+                    {{ analysis.reader_risk }}
+                </div>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -186,7 +209,12 @@
         {% endif %}
     </div>
 
-
+    {% if analysis.score_explanation %}
+    <div class="score-explanation fade-in">
+        <strong>Analytic Synthesis:</strong>
+        {{ analysis.score_explanation }}
+    </div>
+    {% endif %}
 
     <div class="details-grid">
         {% if analysis.subjective_claims %}
@@ -256,10 +284,25 @@
                 {% for item in analysis.notable_omissions %}
                 <li>
                     {% if item is mapping %}
-                    <span class="omission-text">{{ item.text }}</span>{% if item.url %}<a href="{{ item.url }}"
-                        target="_blank" class="source-link" title="Verify source">
+                    <div class="claim-header" style="margin-bottom: 4px;">
+                        {% if item.relevance %}
+                        <span class="metadata-badge {{ item.relevance|lower }}">{{ item.relevance }}</span>
+                        {% endif %}
+                        {% if item.intentionality %}
+                        <span class="metadata-badge {{ item.intentionality|lower }}">{{ item.intentionality }}</span>
+                        {% endif %}
+                    </div>
+                    <span class="omission-text">{{ item.text }}</span>
+                    {% if item.url %}
+                    <a href="{{ item.url }}" target="_blank" class="source-link" title="Verify source">
                         <span class="link-icon">↗</span> {{ item.url | domain }}
-                    </a>{% endif %}
+                    </a>
+                    {% endif %}
+                    {% if item.justification %}
+                    <div class="claim-support" style="font-size: 0.75rem; margin-top: 4px;">
+                        <strong>Justification:</strong> {{ item.justification }}
+                    </div>
+                    {% endif %}
                     {% else %}
                     {{ item }}
                     {% endif %}

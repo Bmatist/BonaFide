@@ -68,12 +68,16 @@ class MultiAgentAnalyzer:
         Text: {text[:30000]}
 
         Output JSON with keys:
-        - "main_topic": String (The core subject).
-        - "key_entities": List of strings (People, Org, Countries involved).
-        - "factual_claims": List of strings (Specific assertions made).
-        - "narrative_arc": String (The story being told).
-        - "tone_keywords": List of strings (Adjectives/Verbs used most frequently).
-        """
+    - "main_topic": String (The core subject).
+    - "article_metadata": {{
+        "genre": String (News Report, Opinion, Editorial, Interview, Academic Analysis, or Feature),
+        "expected_neutrality": String (High, Medium, or Low - e.g. High for News, Low for Op-Eds)
+      }},
+    - "key_entities": List of strings (People, Org, Countries involved).
+    - "factual_claims": List of strings (Specific assertions made).
+    - "narrative_arc": String (The story being told).
+    - "tone_keywords": List of strings (Adjectives/Verbs used most frequently).
+    """
         return self._call_model(prompt)
 
     def step_2_get_context(self, text, search_results):
@@ -119,16 +123,29 @@ class MultiAgentAnalyzer:
         3. Perform Narrative Fingerprinting:
            - First, identify the geopolitical Region/Context (e.g. MENA, Latin America, US Domestic).
            - Identify the 'Editorial Ecosystem' this text most closely resembles within that region. 
-           - **CRITICAL**: In 'closest_match', provide names of notable worldwide media that align with the same speech, framing template, or style (e.g. 'Western-Liberal / Critical Opposition (NYT, The Guardian)', 'State-Adjacent (RT, CCTV, Al Arabiya)', 'Pan-Arabist (Al Jazeera)', 'Populist-Nativist (Fox News)').
+           - **CRITICAL**: In 'closest_match', map the text to EXACTLY ONE of these archetypes and include specific media examples:
+             * **Western-Liberal / Centrist** (e.g. NYT, BBC, The Guardian, Le Monde)
+             * **State-Aligned / Official** (e.g. Asharq Al-Awsat, Al Arabiya, CCTV, RT, Xinhua)
+             * **Pan-Arabist / Regional Network** (e.g. Al Jazeera, Al-Araby Al-Jadeed)
+             * **Business-Institutional / Pragmatic** (e.g. Al-Monitor, Reuters, Bloomberg, WSJ)
+             * **Populist-Nativist / Partisan** (e.g. Fox News, Daily Mail, Breitbart)
+             * **Academic-Institutional / Policy-Heavy** (e.g. Brookings, Chatham House, specialized think-tanks)
            - Identify specific 'shared traits' (vocabulary, framing, omission patterns).
 
         Output JSON with keys:
-        - "editorial_proximity": {{'region': string, 'closest_match': string (Must include specific media names as examples), 'shared_traits': List[string]}}.
-        - "omissions": List of {{'omission': string, 'details': string, 'source_url': string}}.
-        - "verified_claims": List of {{'claim': string, 'status': string, 'support': string}}.
-        - "framing_bias": List of strings (How the article slants what it DOES include).
-        - "ideological_stance": Dictionary (How do they view the conflict/topic?).
-        """
+    - "editorial_proximity": {{'region': string, 'closest_match': string (Must include specific media names as examples), 'shared_traits': List[string]}}.
+    - "omissions": List of {{
+        "omission": string, 
+        "details": string, 
+        "source_url": string,
+        "relevance": string (Critical, Important, or Contextual),
+        "intentionality": string (Likely, Unclear, or Unlikely),
+        "justification": string (One sentence explaining why this omission matters given the article's genre)
+      }}.
+    - "verified_claims": List of {{'claim': string, 'status': string, 'support': string}}.
+    - "framing_bias": List of strings (How the article slants what it DOES include).
+    - "ideological_stance": Dictionary (How do they view the conflict/topic?).
+    """
         return self._call_model(prompt)
 
     def step_4_synthesize(self, analysis, context, comparison, original_text):
@@ -159,21 +176,24 @@ class MultiAgentAnalyzer:
         4. "editorial_proximity": Pass through from Comparison step.
 
         Output JSON with keys:
-        - "ideological_dimensions": (From Comparison)
-        - "narrative_alignment": List of strings (The specific narrative the article pushes).
-        - "subjective_claims": Dictionary (Technique -> List of objects with severity, quote_original, quote_translated, and analysis).
-        - "notable_omissions": List of objects (text and url).
-        - "claims": List of objects (text, confidence, support).
-        - "editorial_proximity": {{'region': string, 'closest_match': string (Ensure specific media names are included), 'shared_traits': List[string]}}.
-        - "score": Float (0-100, where 100 is neutral/complete).
-        - "score_breakdown": {{
-            "completeness": int, (0-100: penalty for omissions)
-            "neutrality": int, (0-100: penalty for subjective/loaded language)
-            "factuality": int (0-100: penalty for disputed/unverified claims)
-          }}
-        - "score_explanation": String (Brief reasoning for the score).
-        - "objectivity_level": {{ "assessment": "...", "range": "...", "confidence": "...", "definitions": "..." }}
-        """
+    - "article_metadata": (From Step 1)
+    - "ideological_dimensions": (From Comparison)
+    - "narrative_alignment": List of strings (The specific narrative the article pushes).
+    - "subjective_claims": Dictionary (Technique -> List of objects with severity, quote_original, quote_translated, and analysis).
+    - "notable_omissions": List of objects (text, url, relevance, intentionality, justification).
+    - "claims": List of objects (text, confidence, support).
+    - "editorial_proximity": {{'region': string, 'closest_match': string (Ensure specific media names are included), 'shared_traits': List[string]}}.
+    - "score": Float (Raw 0-100 score. Measure strictly against a "Gold Standard" news report: 100% complete, perfectly neutral, all facts verified. Most real articles will score significantly lower than 100 here).
+    - "adjusted_score": Float (0-100 score CALIBRATED for genre. Adjust only the PENALTY WEIGHTS, not the facts. e.g. Op-Eds can have a lower neutrality penalty if the bias is transparent and non-deceptive, but remain strict on factual gaps. CRITICAL: Adjusted does NOT mean "higher"; if an article is deceptive or heavily censored, this score must remain low).
+    - "score_breakdown": {{
+        "completeness": int, (0-100: penalty for omissions - scale penalty by article length and genre)
+        "neutrality": int, (0-100: penalty for subjective/loaded language - scale penalty by genre)
+        "factuality": int (0-100: penalty for disputed/unverified claims)
+      }}
+    - "score_explanation": String (Brief reasoning for the score, specifically explaining how the genre influenced the adjustment).
+    - "reader_risk": String (1-2 sentences on interpretative consequences if read without context. Question: "If I read this article without additional context, what kinds of misunderstandings, distortions, or false impressions might I walk away with?" Constraints: Short, focused on interpretative consequences, phrased as possibility "Readers might...", non-accusatory).
+    - "objectivity_level": {{ "assessment": "...", "range": "...", "confidence": "...", "definitions": "..." }}
+    """
         return self._call_model(prompt)
 
     def _get_objectivity_level(self, score):
@@ -220,7 +240,7 @@ class MultiAgentAnalyzer:
             else:
                 s1 = {}
         
-        time.sleep(1)
+        time.sleep(30)
         
         # 1.5 Search (RAG)
         # Search for the main topic and entities
@@ -232,11 +252,11 @@ class MultiAgentAnalyzer:
 
         # 2. Context
         s2 = self.step_2_get_context(text, s1_5_snippets)
-        time.sleep(1)
+        time.sleep(30)
         
         # 3. Compare
         s3 = self.step_3_compare(s1, s2)
-        time.sleep(1)
+        time.sleep(30)
         
         # 4. Synthesize
         final_output = self.step_4_synthesize(s1, s2, s3, text)
@@ -297,3 +317,5 @@ def analyze_article(text, url=None):
         print(f"Analysis Error: {e}")
         raise e
 
+def get_mock_data():
+  pass

@@ -41,9 +41,22 @@ templates.env.filters["domain"] = get_domain
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+from pydantic import AnyHttpUrl, ValidationError
+
 @app.post("/analyze", response_class=HTMLResponse)
 async def analyze(request: Request, url: str = Form(...)):
     try:
+        # Validate URL
+        try:
+            valid_url = AnyHttpUrl(url)
+            if valid_url.scheme not in ['http', 'https']:
+                raise ValueError("Only http and https schemes are allowed.")
+        except (ValidationError, ValueError) as ve:
+            return templates.TemplateResponse("partials/error.html", {
+                "request": request,
+                "error": f"Invalid URL: {str(ve)}"
+            })
+
         # Scrape
         text = scrape_article(url)
         

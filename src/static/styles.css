@@ -751,6 +751,106 @@ button:hover {
     color: var(--text-main);
 }
 
+/* Genre and Metadata Badges */
+.genre-container {
+    margin: 0.25rem 0 0.75rem 0;
+    text-align: center;
+}
+
+.genre-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.metadata-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-right: 4px;
+}
+
+.metadata-badge.critical {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.metadata-badge.important {
+    background: #ffedd5;
+    color: #9a3412;
+    border: 1px solid #fed7aa;
+}
+
+.metadata-badge.contextual {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.metadata-badge.likely {
+    border-style: solid;
+}
+
+.metadata-badge.unclear {
+    border-style: dashed;
+}
+
+.metadata-badge.unlikely {
+    border-style: dotted;
+    opacity: 0.8;
+}
+
+.score-comparison {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.adjusted-score {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.raw-score-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.score-explanation {
+    margin: 1.5rem 0;
+    padding: 1.25rem;
+    background: #f8fafc;
+    border-left: 4px solid var(--primary);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-main);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.score-explanation strong {
+    color: var(--primary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
 .label-with-tooltip {
     display: flex;
     align-items: center;
@@ -820,4 +920,43 @@ button:hover {
     border-width: 4px;
     border-style: solid;
     border-color: #1e293b transparent transparent transparent;
+}
+
+/* Reader Risk Card */
+.reader-risk-card {
+    background: #fffbeb;
+    /* amber-50 */
+    border: 1px solid #fcd34d;
+    /* amber-300 */
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    text-align: left;
+}
+
+.reader-risk-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #b45309;
+    /* amber-700 */
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.risk-icon {
+    font-size: 0.9em;
+}
+
+.reader-risk-content {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: #78350f;
+    /* amber-900 */
+    font-style: italic;
 }
