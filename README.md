@@ -1,6 +1,6 @@
-# Political Bias Detection
+# BonaFide
 
-A web-based tool for analyzing news articles for political bias, framing, and omissions.
+A web-based tool for analyzing news articles for political bias, framing, and omissions using a multi-agent orchestrated pipeline.
 
 ## Features
 - **Genre-Aware Scoring**: Calibrated analysis for News, Op-Eds, and Interviews.
