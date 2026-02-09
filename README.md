@@ -50,3 +50,5 @@ TAVILY_API_KEY=your_tavily_api_key_here
 docker build -t bias-detection-app .
 docker run -p 8000:8000 bias-detection-app
 ```
+## License
+This project is licensed under the MIT License — see the LICENSE file for details.
