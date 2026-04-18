@@ -304,12 +304,12 @@ def analyze_article(text, url=None):
     """
     Orchestrator function that replaces the old monolithic one.
     """
-    # USE_MOCK = True
-    # from mock_data import get_mock_data
+    USE_MOCK = True
+    from mock_data import get_mock_data
     
-    # if USE_MOCK:
-    #     time.sleep(1.0)
-    #     return get_mock_data()
+    if USE_MOCK:
+        time.sleep(1.0)
+        return get_mock_data()
 
     try:
         agent = MultiAgentAnalyzer()

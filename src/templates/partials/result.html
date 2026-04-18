@@ -39,8 +39,21 @@
                         text-anchor="start">High</text>
                     <text x="190" y="75" class="gauge-text" fill="#64748b" font-size="7" font-weight="600"
                         text-anchor="start">V. High</text>
+                    {% set current_score = analysis.score | float %}
+                    {% if current_score <= 20 %}
+                        {% set rotation_deg = (10 / 100 * 180) - 90 %}
+                    {% elif current_score <= 40 %}
+                        {% set rotation_deg = (30 / 100 * 180) - 90 %}
+                    {% elif current_score <= 60 %}
+                        {% set rotation_deg = (50 / 100 * 180) - 90 %}
+                    {% elif current_score <= 80 %}
+                        {% set rotation_deg = (70 / 100 * 180) - 90 %}
+                    {% else %}
+                        {% set rotation_deg = (90 / 100 * 180) - 90 %}
+                    {% endif %}
+                    
                     <g class="needle-group"
-                        style="transform: rotate({{ (analysis.score|float / 100 * 180) - 90 }}deg); transform-origin: 100px 100px;">
+                        style="transform: rotate({{ rotation_deg }}deg); transform-origin: 100px 100px;">
                         <path d="M 100,100 L 100,35" class="needle-path" stroke="#333" stroke-width="4"
                             stroke-linecap="round" />
                         <circle cx="100" cy="100" r="6" fill="#333" />
