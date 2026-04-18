@@ -69,10 +69,42 @@ async def analyze(request: Request, url: str = Form(...)):
             "url": url
         })
     except Exception as e:
+        error_msg = str(e)
+        user_friendly_msg = "An unexpected error occurred while analyzing the article."
+        error_title = "Analysis Failed"
+        
+        if "Failed to scrape" in error_msg or "403" in error_msg or "404" in error_msg:
+            error_title = "Couldn't Read Article"
+            user_friendly_msg = "We couldn't access this article. The website might be blocking scrapers, or the article might be protected by a strict paywall."
+        elif "rate limit" in error_msg.lower() or "429" in error_msg or "quota" in error_msg.lower():
+            error_title = "System Overloaded"
+            user_friendly_msg = "The AI service is currently experiencing high traffic or rate limits. Please wait a moment and try again."
+        elif "too large" in error_msg.lower() or "context length" in error_msg.lower() or "too long" in error_msg.lower():
+            error_title = "Article Too Long"
+            user_friendly_msg = "This article exceeds the maximum length our AI can process at one time."
+            
         return templates.TemplateResponse("partials/error.html", {
             "request": request,
-            "error": str(e)
+            "error_title": error_title,
+            "error": user_friendly_msg,
+            "technical_details": error_msg
         })
+
+@app.post("/render_pdf_view", response_class=HTMLResponse)
+async def render_pdf_view(request: Request):
+    try:
+        # We expect a JSON payload containing the analysis data and url
+        data = await request.json()
+        analysis = data.get("analysis", {})
+        url = data.get("url", "Unknown Source")
+        
+        return templates.TemplateResponse("report_pdf.html", {
+            "request": request,
+            "analysis": analysis,
+            "url": url
+        })
+    except Exception as e:
+        return f"Error rendering PDF layout: {str(e)}"
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

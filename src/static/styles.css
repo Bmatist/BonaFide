@@ -553,12 +553,66 @@ button:hover {
 }
 
 .error-card {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
-    padding: 1.5rem;
+    background: #fdf2f8; 
+    border: 1px solid #fbcfe8;
+    color: #831843; 
+    padding: 2rem;
     border-radius: var(--radius);
     text-align: center;
+    max-width: 500px;
+    margin: 2rem auto;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.error-icon-wrapper {
+    margin-bottom: 1rem;
+    color: #e11d48;
+}
+
+.error-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #881337;
+}
+
+.error-message {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #9f1239;
+}
+
+.tech-details-drawer {
+    margin-top: 1.5rem;
+    text-align: left;
+    background: white;
+    border: 1px solid #fce7f3;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.tech-details-drawer summary {
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #be185d;
+    background: #fdf2f8;
+    user-select: none;
+    outline: none;
+}
+
+.tech-details-content {
+    padding: 0.75rem;
+    font-size: 0.7rem;
+    font-family: monospace;
+    color: #4b5563;
+    background: #f8fafc;
+    border-top: 1px solid #fce7f3;
+    max-height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 
 .fade-in {
@@ -959,4 +1013,163 @@ button:hover {
     color: #78350f;
     /* amber-900 */
     font-style: italic;
+}
+
+/* Evidence Drawer for Click-to-Verify */
+.evidence-drawer {
+    margin-top: 0.5rem;
+}
+
+.evidence-summary {
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    user-select: none;
+    transition: all 0.2s;
+    margin-top: 0.25rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.evidence-summary:hover {
+    background: #f8fafc;
+    color: var(--text-main);
+    border-color: #cbd5e1;
+}
+
+.evidence-summary::marker {
+    display: none;
+}
+.evidence-summary::-webkit-details-marker {
+    display: none;
+}
+
+.view-source-icon {
+    transition: transform 0.2s;
+    font-size: 0.9rem;
+    opacity: 0.6;
+    font-family: monospace;
+}
+
+details[open] .view-source-icon {
+    transform: rotate(90deg);
+}
+
+.evidence-content {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    animation: fadeInDown 0.2s ease-out;
+}
+
+.evidence-excerpt {
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--text-main);
+    margin: 0 0 0.5rem 0;
+    line-height: 1.5;
+    border-left: 2px solid var(--primary);
+    padding-left: 0.5rem;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.evidence-link {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--primary);
+    text-decoration: none;
+    margin-top: 0.5rem;
+    transition: color 0.2s;
+}
+
+.evidence-link:hover {
+    color: #1d4ed8; 
+    text-decoration: underline;
+}
+
+.evidence-link-icon {
+    font-size: 0.7rem;
+    margin-left: 4px;
+}
+
+/* Export Menu */
+.export-menu {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-export {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-export:hover {
+    background: #f8fafc;
+    color: var(--text-main);
+    border-color: #cbd5e1;
+}
+
+.pdf-btn:hover { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
+.md-btn:hover { color: #4f46e5; border-color: #a5b4fc; background: #eef2ff; }
+.json-btn:hover { color: #d97706; border-color: #fcd34d; background: #fffbeb; }
+
+/* Print / PDF Mode */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    
+    .result-card, .result-card * {
+        visibility: visible;
+    }
+    
+    .result-card {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+    }
+    
+    .export-menu, .search-box, header {
+        display: none !important;
+    }
+    
+    .gauge-container {
+        /* Force SVG gauge background rendering */
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
 }

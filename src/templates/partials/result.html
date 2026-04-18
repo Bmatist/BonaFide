@@ -1,6 +1,11 @@
 <div class="result-card fade-in">
-    <div class="meta">
+    <div class="meta" style="display: flex; justify-content: space-between; align-items: center;">
         <span class="url-source">Source: {{ url }}</span>
+        <div class="export-menu">
+            <button onclick="exportPDF()" class="btn-export pdf-btn">PDF</button>
+            <button onclick="exportMarkdown()" class="btn-export md-btn">Markdown</button>
+            <button onclick="exportJSON()" class="btn-export json-btn">JSON</button>
+        </div>
     </div>
 
     <div class="analysis-grid">
@@ -267,6 +272,19 @@
                     </div>
                     <span class="claim-text">{{ claim.text }}</span>
                     <div class="claim-support">{{ claim.support }}</div>
+                    {% if claim.evidence %}
+                    <details class="evidence-drawer">
+                        <summary class="evidence-summary">
+                            <span class="view-source-icon">›</span> Source
+                        </summary>
+                        <div class="evidence-content">
+                            <p class="evidence-excerpt">"{{ claim.evidence.excerpt }}"</p>
+                            <a href="{{ claim.evidence.source_url }}" target="_blank" class="evidence-link" title="Open source article">
+                                Read full article <span class="evidence-link-icon">↗</span>
+                            </a>
+                        </div>
+                    </details>
+                    {% endif %}
                     {% else %}
                     <!-- Support for old format -->
                     {{ claim }}
@@ -313,3 +331,118 @@
         {% endif %}
     </div>
 </div>
+
+<script id="analysis-data" type="application/json">
+    {{ analysis | tojson | safe }}
+</script>
+
+<script>
+    function getFilenameBase() {
+        return 'bonafide_analysis_' + Math.floor(Date.now() / 1000);
+    }
+
+    async function exportPDF() {
+        const dataStr = document.getElementById('analysis-data').textContent;
+        const analysis = JSON.parse(dataStr);
+        const urlStr = "{{ url }}";
+        
+        try {
+            const response = await fetch('/render_pdf_view', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ analysis: analysis, url: urlStr })
+            });
+            
+            if (!response.ok) throw new Error("Failed to render PDF layout");
+            
+            const htmlString = await response.text();
+            
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            iframe.contentWindow.document.open();
+            iframe.contentWindow.document.write(htmlString);
+            iframe.contentWindow.document.close();
+            
+            // Set the document title to control the default PDF filename
+            iframe.contentWindow.document.title = getFilenameBase();
+            
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                setTimeout(() => document.body.removeChild(iframe), 2000);
+            }, 500);
+            
+        } catch (e) {
+            alert("Error generating PDF: " + e.message);
+        }
+    }
+
+    function exportJSON() {
+        const dataStr = document.getElementById('analysis-data').textContent;
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = getFilenameBase() + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function exportMarkdown() {
+        const dataStr = document.getElementById('analysis-data').textContent;
+        const analysis = JSON.parse(dataStr);
+        
+        let md = `# BonaFide Analysis Report\n\n`;
+        md += `**Objectivity Score:** ${analysis.score}/100\n`;
+        if (analysis.adjusted_score) md += `**Adjusted Score:** ${analysis.adjusted_score}/100\n`;
+        
+        if (analysis.objectivity_level) {
+            md += `**Assessment:** ${analysis.objectivity_level.assessment} (Confidence: ${analysis.objectivity_level.confidence})\n\n`;
+        }
+        
+        md += `## Score Breakdown\n`;
+        if (analysis.score_breakdown) {
+            md += `- **Factuality:** ${analysis.score_breakdown.factuality}%\n`;
+            md += `- **Neutrality:** ${analysis.score_breakdown.neutrality}%\n`;
+            md += `- **Completeness:** ${analysis.score_breakdown.completeness}%\n\n`;
+        }
+        
+        if (analysis.score_explanation) {
+            md += `## Analytic Synthesis\n${analysis.score_explanation}\n\n`;
+        }
+        
+        if (analysis.claims && analysis.claims.length > 0) {
+            md += `## Factual Claims\n`;
+            analysis.claims.forEach(c => {
+                md += `- **[${c.confidence}]** ${c.text}\n`;
+                if (c.support) md += `  *Support:* ${c.support}\n`;
+                if (c.evidence) {
+                    md += `  *Evidence:* "${c.evidence.excerpt}" [Source](${c.evidence.source_url})\n`;
+                }
+            });
+            md += `\n`;
+        }
+        
+        if (analysis.notable_omissions && analysis.notable_omissions.length > 0) {
+            md += `## Notable Omissions\n`;
+            analysis.notable_omissions.forEach(o => {
+                md += `- **[${o.intentionality || 'omission'}] [${o.relevance || 'unknown'}]** ${o.text}\n`;
+                if (o.justification) md += `  *Justification:* ${o.justification}\n`;
+                if (o.url) md += `  *Context URL:* ${o.url}\n`;
+            });
+            md += `\n`;
+        }
+        
+        const blob = new Blob([md], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = getFilenameBase() + '.md';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+</script>

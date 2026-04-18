@@ -142,7 +142,7 @@ class MultiAgentAnalyzer:
         "intentionality": string (Likely, Unclear, or Unlikely),
         "justification": string (One sentence explaining why this omission matters given the article's genre)
       }}.
-    - "verified_claims": List of {{'claim': string, 'status': string, 'support': string}}.
+    - "verified_claims": List of {{'claim': string, 'status': string, 'support': string, 'evidence': {{'source_url': string, 'excerpt': string}} }}.
     - "framing_bias": List of strings (How the article slants what it DOES include).
     - "ideological_stance": Dictionary (How do they view the conflict/topic?).
     """
@@ -172,7 +172,7 @@ class MultiAgentAnalyzer:
            - quote_translated: English translation.
            - analysis: A brief explanation of why this quote is biased.
         2. "notable_omissions": Merge information from 'External Context' and 'Gap Comparison'. Provide {{'text': string, 'url': string}}.
-        3. "claims": Use the 'verified_claims' from Gap Comparison. transform to list of objects including status and support.
+        3. "claims": Use the 'verified_claims' from Gap Comparison. transform to list of objects including text, confidence, support, and evidence (containing source_url and excerpt, if available).
         4. "editorial_proximity": Pass through from Comparison step.
 
         Output JSON with keys:
@@ -181,7 +181,7 @@ class MultiAgentAnalyzer:
     - "narrative_alignment": List of strings (The specific narrative the article pushes).
     - "subjective_claims": Dictionary (Technique -> List of objects with severity, quote_original, quote_translated, and analysis).
     - "notable_omissions": List of objects (text, url, relevance, intentionality, justification).
-    - "claims": List of objects (text, confidence, support).
+    - "claims": List of objects (text, confidence, support, evidence: {{'source_url': string, 'excerpt': string}}).
     - "editorial_proximity": {{'region': string, 'closest_match': string (Ensure specific media names are included), 'shared_traits': List[string]}}.
     - "score": Float (Raw 0-100 score. Measure strictly against a "Gold Standard" news report: 100% complete, perfectly neutral, all facts verified. Most real articles will score significantly lower than 100 here).
     - "adjusted_score": Float (0-100 score CALIBRATED for genre. Adjust only the PENALTY WEIGHTS, not the facts. e.g. Op-Eds can have a lower neutrality penalty if the bias is transparent and non-deceptive, but remain strict on factual gaps. CRITICAL: Adjusted does NOT mean "higher"; if an article is deceptive or heavily censored, this score must remain low).
@@ -305,6 +305,7 @@ def analyze_article(text, url=None):
     Orchestrator function that replaces the old monolithic one.
     """
     # USE_MOCK = True
+    # from mock_data import get_mock_data
     
     # if USE_MOCK:
     #     time.sleep(1.0)
@@ -316,6 +317,3 @@ def analyze_article(text, url=None):
     except Exception as e:
         print(f"Analysis Error: {e}")
         raise e
-
-def get_mock_data():
-  pass

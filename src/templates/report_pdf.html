@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BonaFide Subjectivity Report</title>
+    <style>
+        /* A4 Reset and Paging */
+        @page {
+            size: A4;
+            margin: 25mm 20mm 25mm 20mm;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #111827;
+            background: #fff;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+        
+        /* Typography */
+        h1, h2, h3, h4 {
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            color: #111;
+            font-weight: 700;
+        }
+        h1 { font-size: 24pt; margin-bottom: 0.5cm; }
+        h2 { font-size: 16pt; margin-top: 1cm; margin-bottom: 0.3cm; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.1cm; }
+        h3 { font-size: 13pt; margin-top: 0.5cm; margin-bottom: 0.2cm; }
+        p { margin-bottom: 0.4cm; }
+        
+        /* Cover Page Elements */
+        .cover-page {
+            height: 220mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            padding: 2cm;
+        }
+        .cover-logo {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 32pt;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: #1f2937;
+            margin-bottom: 1cm;
+        }
+        .cover-title {
+            font-size: 26pt;
+            margin-bottom: 0.5cm;
+        }
+        .cover-meta {
+            font-size: 12pt;
+            color: #4b5563;
+        }
+        .score-box {
+            margin: 2cm auto;
+            width: 8cm;
+            padding: 1cm;
+            border: 2px solid #1f2937;
+            border-radius: 8px;
+        }
+        .score-val {
+            font-size: 40pt;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-weight: bold;
+        }
+        .score-label {
+            font-size: 10pt;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4b5563;
+            margin-top: 0.2cm;
+        }
+        .footer {
+            margin-top: auto;
+            font-size: 9pt;
+            color: #6b7280;
+        }
+
+        /* Lists */
+        ul { margin-left: 0.5cm; margin-bottom: 0.4cm; }
+        li { margin-bottom: 0.2cm; }
+        
+        /* Grid definitions */
+        .metrics-grid {
+            display: flex;
+            gap: 1cm;
+            margin-bottom: 0.5cm;
+        }
+        .metric-card {
+            flex: 1;
+            border: 1px solid #d1d5db;
+            padding: 0.5cm;
+            border-radius: 4px;
+        }
+        .metric-card .title { font-size: 9pt; text-transform: uppercase; color: #6b7280; margin-bottom: 0.2cm; }
+        .metric-card .val { font-size: 14pt; font-weight: bold; }
+        
+        /* Claims */
+        .claim-item {
+            margin-bottom: 0.8cm;
+        }
+        .claim-text {
+            font-size: 12pt;
+            font-weight: 500;
+            margin-bottom: 0.2cm;
+            color: #111827;
+        }
+        .claim-badge {
+            display: inline-block;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 8pt;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            color: #4b5563;
+            margin-right: 0.2cm;
+            position: relative;
+            top: -2px;
+        }
+        .claim-support {
+            font-style: italic;
+            color: #4b5563;
+            margin-bottom: 0.2cm;
+            padding-left: 0.5cm;
+            border-left: 2px solid #cbd5e1;
+        }
+        .claim-evidence {
+            padding: 0.3cm;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            font-size: 10pt;
+        }
+        .claim-evidence-url {
+            display: block;
+            margin-top: 0.1cm;
+            font-size: 8pt;
+            color: #3b82f6;
+            font-family: monospace;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- COVER PAGE -->
+    <div class="cover-page">
+        <div class="cover-logo" style="color: #1e3a8a;">BonaFide<span style="color: #3b82f6;">.</span></div>
+        <h1 class="cover-title">Algorithmic Bias Analysis</h1>
+        <p class="cover-meta">Generated for Document:</p>
+        <p style="word-break: break-all; font-family: monospace; font-size: 9pt; margin-bottom: 1cm; color: #4b5563;">{{ url }}</p>
+        
+        {% set score = analysis.score | int %}
+        {% if score < 40 %}
+            {% set score_color = '#dc2626' %} <!-- red -->
+            {% set score_border = '#fca5a5' %}
+            {% set score_bg = '#fef2f2' %}
+        {% elif score < 75 %}
+            {% set score_color = '#d97706' %} <!-- amber -->
+            {% set score_border = '#fcd34d' %}
+            {% set score_bg = '#fffbeb' %}
+        {% else %}
+            {% set score_color = '#059669' %} <!-- emerald -->
+            {% set score_border = '#6ee7b7' %}
+            {% set score_bg = '#ecfdf5' %}
+        {% endif %}
+        
+        <div class="score-box" style="border-color: {{ score_border }}; background-color: {{ score_bg }}; color: {{ score_color }};">
+            <div class="score-val">{{ analysis.score }}</div>
+            <div class="score-label" style="color: {{ score_color }}; opacity: 0.9;">Objectivity Index (0-100)</div>
+            {% if analysis.adjusted_score %}
+            <div style="margin-top: 0.2cm; font-size: 10pt; opacity: 0.8;">
+                Adjusted Context Score: {{ analysis.adjusted_score }}
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if analysis.objectivity_level %}
+        <h2 style="border-bottom: none; margin-top: 0.5cm; color: {{ score_color }};">{{ analysis.objectivity_level.assessment }}</h2>
+        <p class="cover-meta">Confidence: {{ analysis.objectivity_level.confidence }}</p>
+        {% endif %}
+        
+        <div class="footer">
+            Powered by Multi-Agent Synthesized LLM Analysis<br>
+            Strictly for informational and research purposes
+        </div>
+    </div>
+
+    <!-- Insert Page Break -->
+    <div class="page-break"></div>
+
+    <!-- EXECUTIVE SUMMARY -->
+    <h2 class="section-summary" style="color: #2563eb; border-bottom: 2px solid #bfdbfe;">1. Executive Summary</h2>
+    {% if analysis.article_metadata %}
+    <p><strong>Genre:</strong> {{ analysis.article_metadata.genre }}</p>
+    {% endif %}
+    
+    {% if analysis.score_breakdown %}
+    <div class="metrics-grid avoid-break">
+        <div class="metric-card">
+            <div class="title">Factuality Matrix</div>
+            <div class="val" style="color: #059669;">{{ analysis.score_breakdown.factuality }} / 100</div>
+        </div>
+        <div class="metric-card">
+            <div class="title">Neutrality Index</div>
+            <div class="val" style="color: #2563eb;">{{ analysis.score_breakdown.neutrality }} / 100</div>
+        </div>
+        <div class="metric-card">
+            <div class="title">Completeness</div>
+            <div class="val" style="color: #ea580c;">{{ analysis.score_breakdown.completeness }} / 100</div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if analysis.score_explanation %}
+    <h3>Analytic Synthesis</h3>
+    <p>{{ analysis.score_explanation }}</p>
+    {% endif %}
+
+    <!-- FACTUAL CLAIMS -->
+    {% if analysis.claims and analysis.claims|length > 0 %}
+    <div class="page-break"></div>
+    <h2 class="section-claims" style="color: #059669; border-bottom: 2px solid #a7f3d0;">2. Assessed Factual Claims</h2>
+    {% for claim in analysis.claims %}
+    <div class="claim-item avoid-break">
+        <div class="claim-text">
+            <span class="claim-badge">{{ claim.confidence }}</span> {{ claim.text }}
+        </div>
+        {% if claim.support %}
+        <div class="claim-support">{{ claim.support }}</div>
+        {% endif %}
+        {% if claim.evidence %}
+        <div class="claim-evidence">
+            <strong>Trace Output:</strong> "{{ claim.evidence.excerpt }}"
+            <span class="claim-evidence-url">{{ claim.evidence.source_url }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- NOTABLE OMISSIONS -->
+    {% if analysis.notable_omissions and analysis.notable_omissions|length > 0 %}
+    <div class="page-break"></div>
+    <h2 class="section-omissions" style="color: #ea580c; border-bottom: 2px solid #fed7aa;">3. Detected Omissions & Frame Biases</h2>
+    {% for om in analysis.notable_omissions %}
+    <div class="claim-item avoid-break">
+        <div class="claim-text">
+            <span class="claim-badge">{{ om.intentionality | default('Omission') }}</span> 
+            <span class="claim-badge">{{ om.relevance | default('Unknown') }} Impact</span> 
+            {{ om.text }}
+        </div>
+        {% if om.justification %}
+        <p style="font-size: 10pt; color: #4b5563;"><strong>Justification:</strong> {{ om.justification }}</p>
+        {% endif %}
+        {% if om.url %}
+        <p style="font-size: 9pt; font-family: monospace; color: #3b82f6;"><strong>Source reference:</strong> {{ om.url }}</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+</body>
+</html>
