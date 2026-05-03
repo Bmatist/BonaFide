@@ -305,15 +305,60 @@ def analyze_article(text, url=None):
     Orchestrator function that replaces the old monolithic one.
     """
     USE_MOCK = True
-    from mock_data import get_mock_data
     
     if USE_MOCK:
         time.sleep(1.0)
+        from .mock_data import get_mock_data
         return get_mock_data()
-
+        
     try:
         agent = MultiAgentAnalyzer()
         return agent.run(text, url)
     except Exception as e:
         print(f"Analysis Error: {e}")
         raise e
+
+def analyze_comparative(text_a: str, url_a: str, text_b: str, url_b: str) -> dict:
+    USE_MOCK = True
+    
+    if USE_MOCK:
+        import time
+        time.sleep(1.0)
+        return get_mock_comparative_data(url_a, url_b)
+
+def get_mock_comparative_data(url_a: str, url_b: str):
+    return {
+        "divergence_index": 82,
+        "synthesis": "Source A strongly frames the incident as a defensive necessity provoked by terrorism, heavily omitting civilian casualties. Conversely, Source B frames the event as a disproportionate escalation, heavily omitting the target's prior militant activities. They share almost no overlap in their presentation of the exact same event.",
+        "source_a": {
+            "name": url_a,
+            "score": 45,
+            "assessment": "High Bias"
+        },
+        "source_b": {
+            "name": url_b,
+            "score": 78,
+            "assessment": "Moderate Objectivity"
+        },
+        "fact_ledger": [
+            {
+                "fact": "A drone strike occurred near the border at 3:00 AM.",
+                "presence": "Shared"
+            },
+            {
+                "fact": "The strike resulted in the death of 4 immediate family members in the compound.",
+                "presence": "Exclusive to Source B",
+                "justification_omitted_by_other": "Source A omits this to focus solely on the strategic success of the operation, sanitizing the human cost."
+            },
+            {
+                "fact": "The primary target had been linked to a previous attack that killed 12 soldiers.",
+                "presence": "Exclusive to Source A",
+                "justification_omitted_by_other": "Source B omits this to frame the victim purely sympathetically, downplaying the defensive rationale of the strike."
+            },
+            {
+                "fact": "Local human rights groups condemned the strike as a violation of sovereignty.",
+                "presence": "Exclusive to Source B",
+                "justification_omitted_by_other": "Source A removes critical dissenting voices to present the operation as universally justified."
+            }
+        ]
+    }

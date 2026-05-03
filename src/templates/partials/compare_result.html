@@ -1,0 +1,118 @@
+<div class="result-card fade-in" style="max-width: 1200px; margin: 0 auto;">
+    <!-- Divergence Header -->
+    <div class="compare-header">
+        <div class="divergence-label">Narrative Divergence Index</div>
+        <div class="divergence-score">{{ analysis.divergence_index }}<span style="font-size: 0.5em; color: #9ca3af;">/100</span></div>
+        <p class="compare-synthesis" style="margin-top: 20px;">
+            {{ analysis.synthesis }}
+        </p>
+    </div>
+
+    <!-- Source Matchup Gauges -->
+    <div class="comparative-grid">
+        <!-- Source A Card -->
+        <div class="source-card">
+            <h3>Source A</h3>
+            <span class="url-mini">{{ url_a }}</span>
+            
+            <div class="gauge-container" style="margin-top: 10px;">
+                <svg class="gauge-svg" viewBox="-25 0 250 130">
+                    <path d="M 30,100 A 70,70 0 0 1 43.4,58.9" fill="none" stroke="#ef4444" stroke-width="20" />
+                    <path d="M 43.4,58.9 A 70,70 0 0 1 78.4,33.4" fill="none" stroke="#f97316" stroke-width="20" />
+                    <path d="M 78.4,33.4 A 70,70 0 0 1 121.6,33.4" fill="none" stroke="#eab308" stroke-width="20" />
+                    <path d="M 121.6,33.4 A 70,70 0 0 1 156.6,58.9" fill="none" stroke="#84cc16" stroke-width="20" />
+                    <path d="M 156.6,58.9 A 70,70 0 0 1 170,100" fill="none" stroke="#22c55e" stroke-width="20" />
+                    
+                    {% set current_score = analysis.source_a.score | float %}
+                    {% if current_score <= 20 %}
+                        {% set rotation_deg = (10 / 100 * 180) - 90 %}
+                    {% elif current_score <= 40 %}
+                        {% set rotation_deg = (30 / 100 * 180) - 90 %}
+                    {% elif current_score <= 60 %}
+                        {% set rotation_deg = (50 / 100 * 180) - 90 %}
+                    {% elif current_score <= 80 %}
+                        {% set rotation_deg = (70 / 100 * 180) - 90 %}
+                    {% else %}
+                        {% set rotation_deg = (90 / 100 * 180) - 90 %}
+                    {% endif %}
+                    
+                    <g class="needle-group" style="transform: rotate({{ rotation_deg }}deg); transform-origin: 100px 100px;">
+                        <path d="M 100,100 L 100,35" class="needle-path" stroke="#333" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="100" cy="100" r="6" fill="#333" />
+                    </g>
+                </svg>
+            </div>
+            <div style="text-align: center; margin-top: -10px;">
+                <span style="font-size: 2em; font-weight: 800; color: #111827;">{{ analysis.source_a.score }}</span>
+                <span style="display: block; font-weight: 700; color: #4b5563;">{{ analysis.source_a.assessment }}</span>
+            </div>
+        </div>
+
+        <!-- Source B Card -->
+        <div class="source-card">
+            <h3>Source B</h3>
+            <span class="url-mini">{{ url_b }}</span>
+            
+            <div class="gauge-container" style="margin-top: 10px;">
+                <svg class="gauge-svg" viewBox="-25 0 250 130">
+                    <path d="M 30,100 A 70,70 0 0 1 43.4,58.9" fill="none" stroke="#ef4444" stroke-width="20" />
+                    <path d="M 43.4,58.9 A 70,70 0 0 1 78.4,33.4" fill="none" stroke="#f97316" stroke-width="20" />
+                    <path d="M 78.4,33.4 A 70,70 0 0 1 121.6,33.4" fill="none" stroke="#eab308" stroke-width="20" />
+                    <path d="M 121.6,33.4 A 70,70 0 0 1 156.6,58.9" fill="none" stroke="#84cc16" stroke-width="20" />
+                    <path d="M 156.6,58.9 A 70,70 0 0 1 170,100" fill="none" stroke="#22c55e" stroke-width="20" />
+                    
+                    {% set current_score_b = analysis.source_b.score | float %}
+                    {% if current_score_b <= 20 %}
+                        {% set rotation_deg_b = (10 / 100 * 180) - 90 %}
+                    {% elif current_score_b <= 40 %}
+                        {% set rotation_deg_b = (30 / 100 * 180) - 90 %}
+                    {% elif current_score_b <= 60 %}
+                        {% set rotation_deg_b = (50 / 100 * 180) - 90 %}
+                    {% elif current_score_b <= 80 %}
+                        {% set rotation_deg_b = (70 / 100 * 180) - 90 %}
+                    {% else %}
+                        {% set rotation_deg_b = (90 / 100 * 180) - 90 %}
+                    {% endif %}
+                    
+                    <g class="needle-group" style="transform: rotate({{ rotation_deg_b }}deg); transform-origin: 100px 100px;">
+                        <path d="M 100,100 L 100,35" class="needle-path" stroke="#333" stroke-width="4" stroke-linecap="round" />
+                        <circle cx="100" cy="100" r="6" fill="#333" />
+                    </g>
+                </svg>
+            </div>
+            <div style="text-align: center; margin-top: -10px;">
+                <span style="font-size: 2em; font-weight: 800; color: #111827;">{{ analysis.source_b.score }}</span>
+                <span style="display: block; font-weight: 700; color: #4b5563;">{{ analysis.source_b.assessment }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fact Ledger -->
+    <div class="fact-ledger">
+        <h3>The Fact Ledger</h3>
+        <p style="text-align: center; color: #6b7280; margin-bottom: 25px; margin-top: -15px;">A cross-reference of the events reported by each source.</p>
+        
+        <div class="fact-list">
+            {% for item in analysis.fact_ledger %}
+            <div class="fact-row">
+                {% if 'Shared' in item.presence %}
+                    <div class="fact-indicator fact-shared">Shared Fact</div>
+                {% elif 'Exclusive to Source A' in item.presence %}
+                    <div class="fact-indicator fact-a">Only in A</div>
+                {% else %}
+                    <div class="fact-indicator fact-b">Only in B</div>
+                {% endif %}
+                
+                <div class="fact-text">
+                    <strong>{{ item.fact }}</strong>
+                    {% if item.justification_omitted_by_other %}
+                    <div style="font-size: 0.9em; color: #6b7280; margin-top: 5px; font-style: italic;">
+                        Omission Context: {{ item.justification_omitted_by_other }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

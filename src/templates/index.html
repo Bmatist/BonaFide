@@ -7,7 +7,7 @@
     <title>BonaFide</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link rel="stylesheet" href="/static/styles.css?v=6">
+    <link rel="stylesheet" href="/static/styles.css?v=8">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -19,12 +19,53 @@
         </header>
 
         <main>
-            <div class="search-box">
-                <form hx-post="/analyze" hx-target="#result-container" hx-indicator="#loading">
-                    <input type="url" name="url" placeholder="Paste article URL here..." required>
-                    <button type="submit">Analyze Article</button>
+            <div class="mode-tabs">
+                <button class="tab-btn active" onclick="setMode('single')" id="btn-single">Single Article</button>
+                <button class="tab-btn" onclick="setMode('compare')" id="btn-compare">Compare Narratives</button>
+            </div>
+
+            <!-- Single Article Form -->
+            <div id="form-single" class="search-box">
+                <form hx-post="/analyze" hx-target="#result-container" hx-indicator="#loading" style="display: flex; align-items: center;">
+                    <input type="url" name="url" placeholder="Paste article URL here..." required style="flex: 1;">
+                    <button type="submit" style="padding: 12px 24px; font-size: 1em;">Analyze Article</button>
                 </form>
             </div>
+
+            <!-- Comparative Mode Form -->
+            <div id="form-compare" class="search-box" style="display: none;">
+                <form hx-post="/compare" hx-target="#result-container" hx-indicator="#loading" style="display: flex; align-items: center; gap: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 15px; flex: 1;">
+                        <input type="url" name="url_a" placeholder="Paste 1st article URL here..." required>
+                        <input type="url" name="url_b" placeholder="Paste 2nd article URL here..." required>
+                    </div>
+                    <button type="submit" style="padding: 12px 24px; font-size: 1em; white-space: nowrap;">Compare Biases</button>
+                </form>
+            </div>
+
+            <script>
+                function setMode(mode) {
+                    const btnSingle = document.getElementById('btn-single');
+                    const btnCompare = document.getElementById('btn-compare');
+                    const formSingle = document.getElementById('form-single');
+                    const formCompare = document.getElementById('form-compare');
+                    
+                    if (mode === 'single') {
+                        btnSingle.classList.add('active');
+                        btnCompare.classList.remove('active');
+                        formSingle.style.display = 'block';
+                        formCompare.style.display = 'none';
+                    } else {
+                        btnCompare.classList.add('active');
+                        btnSingle.classList.remove('active');
+                        formCompare.style.display = 'block';
+                        formSingle.style.display = 'none';
+                    }
+                    
+                    // Clear the result container when switching modes
+                    document.getElementById('result-container').innerHTML = '';
+                }
+            </script>
 
             <div id="loading" class="htmx-indicator">
                 <div class="spinner"></div>

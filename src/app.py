@@ -69,24 +69,59 @@ async def analyze(request: Request, url: str = Form(...)):
             "url": url
         })
     except Exception as e:
+        import traceback
         error_msg = str(e)
-        user_friendly_msg = "An unexpected error occurred while analyzing the article."
-        error_title = "Analysis Failed"
         
-        if "Failed to scrape" in error_msg or "403" in error_msg or "404" in error_msg:
-            error_title = "Couldn't Read Article"
-            user_friendly_msg = "We couldn't access this article. The website might be blocking scrapers, or the article might be protected by a strict paywall."
-        elif "rate limit" in error_msg.lower() or "429" in error_msg or "quota" in error_msg.lower():
-            error_title = "System Overloaded"
-            user_friendly_msg = "The AI service is currently experiencing high traffic or rate limits. Please wait a moment and try again."
-        elif "too large" in error_msg.lower() or "context length" in error_msg.lower() or "too long" in error_msg.lower():
-            error_title = "Article Too Long"
-            user_friendly_msg = "This article exceeds the maximum length our AI can process at one time."
-            
+        # Map known errors
+        if "timeout" in error_msg.lower():
+            user_friendly_msg = "We couldn't reach the website in time. It might be down or blocking our request."
+            error_title = "Connection Timeout"
+        elif "forbidden" in error_msg.lower() or "403" in error_msg:
+            user_friendly_msg = "The news source is actively blocking our AI from reading the article (likely a strict paywall)."
+            error_title = "Access Blocked"
+        elif "token" in error_msg.lower():
+            user_friendly_msg = "The article is too long for our AI to process in a single pass."
+            error_title = "Context Limit Reached"
+        else:
+            user_friendly_msg = "An unexpected error occurred while analyzing the text."
+            error_title = "Analysis Failed"
+
         return templates.TemplateResponse("partials/error.html", {
             "request": request,
             "error_title": error_title,
             "error": user_friendly_msg,
+            "technical_details": error_msg
+        })
+
+@app.post("/compare", response_class=HTMLResponse)
+async def compare_narratives(request: Request, url_a: str = Form(...), url_b: str = Form(...)):
+    try:
+        # Validate URLs
+        for u in [url_a, url_b]:
+            valid_url = AnyHttpUrl(u)
+            if valid_url.scheme not in ['http', 'https']:
+                raise ValueError(f"Only http and https schemes are allowed for {u}.")
+                
+        # In this prototype, we'll skip actual scraping and go straight to the analyzer
+        # since the mock analyzer is synchronous and ignores the text.
+        text_a = "mock text A"
+        text_b = "mock text B"
+        
+        from src.analyzer import analyze_comparative
+        analysis = analyze_comparative(text_a, url_a, text_b, url_b)
+        
+        return templates.TemplateResponse("partials/compare_result.html", {
+            "request": request, 
+            "analysis": analysis,
+            "url_a": url_a,
+            "url_b": url_b
+        })
+    except Exception as e:
+        error_msg = str(e)
+        return templates.TemplateResponse("partials/error.html", {
+            "request": request,
+            "error_title": "Comparison Failed",
+            "error": "We couldn't complete the comparative analysis.",
             "technical_details": error_msg
         })
 
