@@ -1,10 +1,13 @@
+import asyncio
 import os
 import json
 import time
+import re
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from tavily import TavilyClient
+from mock_data import get_mock_data
 
 # Load environment variables
 load_dotenv()
@@ -20,30 +23,51 @@ class MultiAgentAnalyzer:
         
         self.client = genai.Client(api_key=gemini_key)
         self.tavily = TavilyClient(api_key=tavily_key) if tavily_key else None
-        self.model = 'gemini-3-flash-preview' # Using Flash for speed in multi-step
+        self.model = 'gemini-flash-latest' 
+        self.pro_model = 'gemini-pro-latest' 
 
-    def _call_model(self, prompt, response_schema=None):
-        """Helper to call Gemini with JSON enforcement."""
+    async def _call_model_async(self, prompt, response_schema=None, use_pro=False, max_retries=3):
+        """Helper to call Gemini with JSON enforcement and retry logic."""
         config = types.GenerateContentConfig(
             response_mime_type='application/json'
         )
-        try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=config
-            )
-            return json.loads(response.text.strip())
-        except Exception as e:
-            print(f"Model call failed: {e}")
-            return {}
+        target_model = self.pro_model if use_pro else self.model
+        
+        for attempt in range(max_retries):
+            try:
+                response = await self.client.aio.models.generate_content(
+                    model=target_model,
+                    contents=prompt,
+                    config=config
+                )
+                return json.loads(response.text.strip())
+            except Exception as e:
+                error_msg = str(e)
+                print(f"Model call failed (Attempt {attempt+1}/{max_retries}): {error_msg}")
+                if attempt < max_retries - 1:
+                    # Exponential backoff only if error
+                    sleep_time = 5 * (attempt + 1)
+                    if "retry in" in error_msg:
+                        match = re.search(r"retry in (\d+(?:\.\d+)?)s", error_msg)
+                        if match:
+                            sleep_time = float(match.group(1)) + 1
+                    print(f"Retrying in {sleep_time:.1f} seconds...")
+                    await asyncio.sleep(sleep_time)
+                else:
+                    # Final attempt fallback: if Pro fails, try Flash as a last resort
+                    if use_pro:
+                        print("   [Fallback] Pro failed, attempting with Flash...")
+                        return await self._call_model_async(prompt, response_schema, use_pro=False, max_retries=1)
+                    return {}
 
-    def _search_tavily(self, query):
+    async def _search_tavily_async(self, query):
         """Perform search to get real-world context snippets."""
         print(f"   [Step 1.5] Searching for context: {query}...")
         try:
-            # Get search results with snippets
-            results = self.tavily.search(query=query, search_depth="advanced", max_results=5)
+            # Wrap synchronous Tavily call in a thread
+            results = await asyncio.to_thread(
+                self.tavily.search, query=query, search_depth="advanced", max_results=5
+            )
             snippets = []
             for res in results.get('results', []):
                 snippets.append(f"Source: {res['url']}\nContent: {res['content']}\n")
@@ -55,7 +79,7 @@ class MultiAgentAnalyzer:
             print(f"Tavily search failed: {e}")
             return {"snippets": "Search failed.", "raw": None}
 
-    def step_1_analyze_content(self, text):
+    async def step_1_analyze_content(self, text):
         """
         Role: The Reader (Objective Extraction)
         Goal: Extract what is physically in the text without judging it.
@@ -78,9 +102,9 @@ class MultiAgentAnalyzer:
     - "narrative_arc": String (The story being told).
     - "tone_keywords": List of strings (Adjectives/Verbs used most frequently).
     """
-        return self._call_model(prompt)
+        return await self._call_model_async(prompt)
 
-    def step_2_get_context(self, text, search_results):
+    async def step_2_get_context(self, text, search_results):
         """
         Role: The Researcher (RAG Context)
         """
@@ -102,9 +126,9 @@ class MultiAgentAnalyzer:
         - "competing_narratives": List of strings (Alternative ways this story is told).
         - "external_facts": List of {{'fact': string, 'source_url': string}} (Specific data points found).
         """
-        return self._call_model(prompt)
+        return await self._call_model_async(prompt)
 
-    def step_3_compare(self, analysis, context):
+    async def step_3_compare(self, analysis, context):
         """
         Role: The Fact-Checker (Bias by Omission)
         """
@@ -146,9 +170,9 @@ class MultiAgentAnalyzer:
     - "framing_bias": List of strings (How the article slants what it DOES include).
     - "ideological_stance": Dictionary (How do they view the conflict/topic?).
     """
-        return self._call_model(prompt)
+        return await self._call_model_async(prompt, use_pro=True)
 
-    def step_4_synthesize(self, analysis, context, comparison, original_text):
+    async def step_4_synthesize(self, analysis, context, comparison, original_text, target_language="English"):
         """
         Role: The Narrator (Final Report)
         """
@@ -183,18 +207,21 @@ class MultiAgentAnalyzer:
     - "notable_omissions": List of objects (text, url, relevance, intentionality, justification).
     - "claims": List of objects (text, confidence, support).
     - "editorial_proximity": {{'region': string, 'closest_match': string (Ensure specific media names are included), 'shared_traits': List[string]}}.
-    - "score": Float (Raw 0-100 score. Measure strictly against a "Gold Standard" news report: 100% complete, perfectly neutral, all facts verified. Most real articles will score significantly lower than 100 here).
-    - "adjusted_score": Float (0-100 score CALIBRATED for genre. Adjust only the PENALTY WEIGHTS, not the facts. e.g. Op-Eds can have a lower neutrality penalty if the bias is transparent and non-deceptive, but remain strict on factual gaps. CRITICAL: Adjusted does NOT mean "higher"; if an article is deceptive or heavily censored, this score must remain low).
+    - "score": Float (Raw 0-100 score).
+    - "adjusted_score": Float (0-100 score CALIBRATED for genre).
     - "score_breakdown": {{
-        "completeness": int, (0-100: penalty for omissions - scale penalty by article length and genre)
-        "neutrality": int, (0-100: penalty for subjective/loaded language - scale penalty by genre)
-        "factuality": int (0-100: penalty for disputed/unverified claims)
+        "completeness": int, 
+        "neutrality": int, 
+        "factuality": int
       }}
-    - "score_explanation": String (Brief reasoning for the score, specifically explaining how the genre influenced the adjustment).
-    - "reader_risk": String (1-2 sentences on interpretative consequences if read without context. Question: "If I read this article without additional context, what kinds of misunderstandings, distortions, or false impressions might I walk away with?" Constraints: Short, focused on interpretative consequences, phrased as possibility "Readers might...", non-accusatory).
+    - "score_explanation": String (Brief reasoning for the score).
+    - "reader_risk": String (Interpretative consequences).
     - "objectivity_level": {{ "assessment": "...", "range": "...", "confidence": "...", "definitions": "..." }}
+    
+    IMPORTANT: You must generate the narrative content (explanation, reader_risk, analysis, technique names, and all text descriptions) in {target_language}. 
+    HOWEVER, for the specific categorical tags (severity, confidence, relevance, intentionality, and claim status), you MUST use the EXACT English keywords listed in the requirements (e.g., "Severe", "Moderate", "Mild", "Verified", "Disputed", "Unverified", "Critical", "Important", "Contextual", "Likely", "Unlikely"). This is necessary for the UI styling to function.
     """
-        return self._call_model(prompt)
+        return await self._call_model_async(prompt, use_pro=True)
 
     def _get_objectivity_level(self, score):
         """Maps a numeric score to its textual bucket."""
@@ -230,36 +257,31 @@ class MultiAgentAnalyzer:
                 "definitions": "Primarily descriptive; minimal evaluative or emotive language"
             }
 
-    def run(self, text, url=None):
+    async def run(self, text, url=None, target_language="English"):
         # 1. Analyze
-        s1 = self.step_1_analyze_content(text)
+        s1 = await self.step_1_analyze_content(text)
         
         if isinstance(s1, list):
-            if len(s1) > 0:
-                s1 = s1[0]
-            else:
-                s1 = {}
-        
-        time.sleep(30)
+            s1 = s1[0] if s1 else {}
         
         # 1.5 Search (RAG)
-        # Search for the main topic and entities
         topic = s1.get('main_topic', 'political news')
         search_query = f"{topic} perspective controversy"
-        search_data = self._search_tavily(search_query)
+        search_data = await self._search_tavily_async(search_query)
         s1_5_snippets = search_data["snippets"]
         s1_5_raw = search_data["raw"]
 
         # 2. Context
-        s2 = self.step_2_get_context(text, s1_5_snippets)
-        time.sleep(30)
+        await asyncio.sleep(1) # Tiny breather
+        s2 = await self.step_2_get_context(text, s1_5_snippets)
         
         # 3. Compare
-        s3 = self.step_3_compare(s1, s2)
-        time.sleep(30)
+        await asyncio.sleep(1) # Tiny breather
+        s3 = await self.step_3_compare(s1, s2)
         
         # 4. Synthesize
-        final_output = self.step_4_synthesize(s1, s2, s3, text)
+        await asyncio.sleep(1) # Tiny breather
+        final_output = await self.step_4_synthesize(s1, s2, s3, text, target_language)
         
         if isinstance(final_output, list):
             if len(final_output) > 0:
@@ -300,22 +322,19 @@ class MultiAgentAnalyzer:
             print(f"Failed to log trace: {e}")
 
 
-def analyze_article(text, url=None):
+async def analyze_article(text, url=None, language="English"):
     """
     Orchestrator function that replaces the old monolithic one.
     """
-    # USE_MOCK = True
+    USE_MOCK = True
     
-    # if USE_MOCK:
-    #     time.sleep(1.0)
-    #     return get_mock_data()
+    if USE_MOCK:
+        await asyncio.sleep(1.0)
+        return get_mock_data()
 
     try:
         agent = MultiAgentAnalyzer()
-        return agent.run(text, url)
+        return await agent.run(text, url, language)
     except Exception as e:
         print(f"Analysis Error: {e}")
         raise e
-
-def get_mock_data():
-  pass

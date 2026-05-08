@@ -41,11 +41,20 @@ def scrape_article(url):
         # 2. Remove elements by common class/id names for noise
         noise_keywords = ['comment', 'reply', 'sidebar', 'widget', 'related', 'ads', 'recommended', 'share', 'menu']
         for tag in soup.find_all(attrs={"class": True}):
-            classes = " ".join(tag.get("class", [])).lower()
+            if tag.attrs is None:
+                continue
+            classes = tag.get("class", [])
+            if isinstance(classes, list):
+                classes = " ".join(classes).lower()
+            else:
+                classes = str(classes).lower()
             if any(n in classes for n in noise_keywords):
                 tag.decompose()
+                
         for tag in soup.find_all(attrs={"id": True}):
-            ids = tag.get("id", "").lower()
+            if tag.attrs is None:
+                continue
+            ids = str(tag.get("id", "")).lower()
             if any(n in ids for n in noise_keywords):
                 tag.decompose()
 

@@ -3,6 +3,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
+import asyncio
 
 import os
 import sys
@@ -44,7 +45,7 @@ async def read_root(request: Request):
 from pydantic import AnyHttpUrl, ValidationError
 
 @app.post("/analyze", response_class=HTMLResponse)
-async def analyze(request: Request, url: str = Form(...)):
+async def analyze(request: Request, url: str = Form(...), language: str = Form("English")):
     try:
         # Validate URL
         try:
@@ -57,11 +58,11 @@ async def analyze(request: Request, url: str = Form(...)):
                 "error": f"Invalid URL: {str(ve)}"
             })
 
-        # Scrape
-        text = scrape_article(url)
+        # Scrape (Run in thread to avoid blocking event loop)
+        text = await asyncio.to_thread(scrape_article, url)
         
         # Analyze
-        analysis = analyze_article(text, url)
+        analysis = await analyze_article(text, url, language)
         
         return templates.TemplateResponse("partials/result.html", {
             "request": request, 

@@ -1,8 +1,4 @@
 <div class="result-card fade-in">
-    <div class="meta">
-        <span class="url-source">Source: {{ url }}</span>
-    </div>
-
     <div class="analysis-grid">
         <!-- Row 1 Left: Objectivity Assessment -->
         <div class="stat-box assessment-card">
@@ -81,98 +77,69 @@
             {% endif %}
         </div>
 
-        <!-- Row 1 Right: Dimensions & Narrative -->
+        <!-- Row 1 Right: Score Components and Reader Risk -->
         <div class="top-details-group">
-            <div class="stat-box">
-                <h3>Ideological Dimensions</h3>
-                <div class="dimensions-list">
-                    {% if analysis.ideological_dimensions is mapping %}
-                    {% for key, value in analysis.ideological_dimensions.items() %}
-                    <div class="dimension-item">
-                        <span class="dim-key">{{ key }}:</span>
-                        <span class="dim-val">{{ value }}</span>
+            {% if analysis.score_breakdown %}
+            <div class="stat-box breakdown-card">
+                <h3>Score Components</h3>
+                <div class="score-breakdown">
+                    <div class="breakdown-item" onclick="scrollToSection('accordion-neutrality')" title="Click to view Subjective Claims">
+                        <div class="breakdown-label">
+                            <span class="label-with-tooltip">
+                                Neutrality
+                                <div class="tooltip-wrapper">
+                                    <span class="info-icon">i</span>
+                                    <div class="tooltip-content">Evaluates the absence of loaded language, emotional
+                                        framing, and subjective reporting.</div>
+                                </div>
+                            </span>
+                            <span class="breakdown-val">{{ analysis.score_breakdown.neutrality }}%</span>
+                        </div>
+                        <div class="breakdown-bar">
+                            <div class="breakdown-fill"
+                                style="width: {{ analysis.score_breakdown.neutrality }}%; background: linear-gradient(90deg, #f59e0b, #fbbf24); box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);"></div>
+                        </div>
                     </div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="value">{{ analysis.orientation }}</div>
-                    {% endif %}
+                    <div class="breakdown-item" onclick="scrollToSection('accordion-factuality')" title="Click to view Factual Claims">
+                        <div class="breakdown-label">
+                            <span class="label-with-tooltip">
+                                Factuality
+                                <div class="tooltip-wrapper">
+                                    <span class="info-icon">i</span>
+                                    <div class="tooltip-content">Assesses the verifiability and consensus of the article's
+                                        core factual claims against external sources.</div>
+                                </div>
+                            </span>
+                            <span class="breakdown-val">{{ analysis.score_breakdown.factuality }}%</span>
+                        </div>
+                        <div class="breakdown-bar">
+                            <div class="breakdown-fill"
+                                style="width: {{ analysis.score_breakdown.factuality }}%; background: linear-gradient(90deg, #10b981, #34d399); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);"></div>
+                        </div>
+                    </div>
+                    <div class="breakdown-item" onclick="scrollToSection('accordion-completeness')" title="Click to view Omissions">
+                        <div class="breakdown-label">
+                            <span class="label-with-tooltip">
+                                Completeness
+                                <div class="tooltip-wrapper">
+                                    <span class="info-icon">i</span>
+                                    <div class="tooltip-content">Measures how much critical context from the broader global
+                                        narrative was included or omitted.</div>
+                                </div>
+                            </span>
+                            <span class="breakdown-val">{{ analysis.score_breakdown.completeness }}%</span>
+                        </div>
+                        <div class="breakdown-bar">
+                            <div class="breakdown-fill"
+                                style="width: {{ analysis.score_breakdown.completeness }}%; background: linear-gradient(90deg, #8b5cf6, #a78bfa); box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-box">
-                <h3>Narrative Alignment</h3>
-                <div class="narrative-list">
-                    {% if analysis.narrative_alignment %}
-                    <ul class="simple-list">
-                        {% for item in analysis.narrative_alignment %}
-                        <li>{{ item }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <div class="value">{{ analysis.alignment }}</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+            {% endif %}
 
-        <!-- Row 2 Left: Score Components -->
-        {% if analysis.score_breakdown %}
-        <div class="stat-box breakdown-card">
-            <h3>Score Components</h3>
-            <div class="score-breakdown">
-                <div class="breakdown-item">
-                    <div class="breakdown-label">
-                        <span class="label-with-tooltip">
-                            Neutrality
-                            <div class="tooltip-wrapper">
-                                <span class="info-icon">i</span>
-                                <div class="tooltip-content">Evaluates the absence of loaded language, emotional
-                                    framing, and subjective reporting.</div>
-                            </div>
-                        </span>
-                        <span class="breakdown-val">{{ analysis.score_breakdown.neutrality }}%</span>
-                    </div>
-                    <div class="breakdown-bar">
-                        <div class="breakdown-fill"
-                            style="width: {{ analysis.score_breakdown.neutrality }}%; background: #f59e0b;"></div>
-                    </div>
-                </div>
-                <div class="breakdown-item">
-                    <div class="breakdown-label">
-                        <span class="label-with-tooltip">
-                            Factuality
-                            <div class="tooltip-wrapper">
-                                <span class="info-icon">i</span>
-                                <div class="tooltip-content">Assesses the verifiability and consensus of the article's
-                                    core factual claims against external sources.</div>
-                            </div>
-                        </span>
-                        <span class="breakdown-val">{{ analysis.score_breakdown.factuality }}%</span>
-                    </div>
-                    <div class="breakdown-bar">
-                        <div class="breakdown-fill"
-                            style="width: {{ analysis.score_breakdown.factuality }}%; background: #10b981;"></div>
-                    </div>
-                </div>
-                <div class="breakdown-item">
-                    <div class="breakdown-label">
-                        <span class="label-with-tooltip">
-                            Completeness
-                            <div class="tooltip-wrapper">
-                                <span class="info-icon">i</span>
-                                <div class="tooltip-content">Measures how much critical context from the broader global
-                                    narrative was included or omitted.</div>
-                            </div>
-                        </span>
-                        <span class="breakdown-val">{{ analysis.score_breakdown.completeness }}%</span>
-                    </div>
-                    <div class="breakdown-bar">
-                        <div class="breakdown-fill"
-                            style="width: {{ analysis.score_breakdown.completeness }}%; background: #8b5cf6;"></div>
-                    </div>
-                </div>
-            </div>
             {% if analysis.reader_risk %}
-            <div class="reader-risk-card">
+            <div class="stat-box reader-risk-card">
                 <div class="reader-risk-title">
                     <span class="risk-icon">⚠️</span> Reader Risk
                 </div>
@@ -182,44 +149,17 @@
             </div>
             {% endif %}
         </div>
-        {% endif %}
-
-        <!-- Row 2 Right: Editorial DNA -->
-        {% if analysis.editorial_proximity %}
-        <div class="stat-box dna-card">
-            <h3>Editorial DNA / Ecosystem</h3>
-            <div class="dna-content">
-                <div class="dna-header">
-                    <div class="dna-match-row">
-                        <span class="dna-label">Proximity:</span>
-                        <span class="dna-value">{{ analysis.editorial_proximity.closest_match }}</span>
-                    </div>
-                    <div class="dna-region">{{ analysis.editorial_proximity.region }}</div>
-                </div>
-                <div class="dna-traits">
-                    <h4>Inherited Traits:</h4>
-                    <ul>
-                        {% for trait in analysis.editorial_proximity.shared_traits %}
-                        <li>{{ trait }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 
-    {% if analysis.score_explanation %}
-    <div class="score-explanation fade-in">
-        <strong>Analytic Synthesis:</strong>
-        {{ analysis.score_explanation }}
-    </div>
-    {% endif %}
 
-    <div class="details-grid">
+
+    <div class="accordion-container fade-in">
         {% if analysis.subjective_claims %}
-        <div class="details-section theme-neutrality">
-            <h3>Subjective Claims (Evidence of Bias)</h3>
+        <details id="accordion-neutrality" class="details-section theme-neutrality">
+            <summary class="accordion-summary">
+                <h3>Subjective Claims (Evidence of Bias)</h3>
+            </summary>
+            <div class="accordion-content">
             <ul class="claims-list subjective">
                 {% if analysis.subjective_claims is mapping %}
                 {% for technique, claims in analysis.subjective_claims.items() %}
@@ -251,12 +191,16 @@
                 {% endfor %}
                 {% endif %}
             </ul>
-        </div>
+            </div>
+        </details>
         {% endif %}
 
         {% if analysis.claims %}
-        <div class="details-section theme-factuality">
-            <h3>Factual Claims (Extracted)</h3>
+        <details id="accordion-factuality" class="details-section theme-factuality">
+            <summary class="accordion-summary">
+                <h3>Factual Claims (Extracted)</h3>
+            </summary>
+            <div class="accordion-content">
             <ul class="claims-list factual">
                 {% for claim in analysis.claims %}
                 <li>
@@ -274,12 +218,16 @@
                 </li>
                 {% endfor %}
             </ul>
-        </div>
+            </div>
+        </details>
         {% endif %}
 
         {% if analysis.notable_omissions %}
-        <div class="details-section theme-completeness">
-            <h3>Counterfactual Context & Omissions</h3>
+        <details id="accordion-completeness" class="details-section theme-completeness">
+            <summary class="accordion-summary">
+                <h3>Counterfactual Context & Omissions</h3>
+            </summary>
+            <div class="accordion-content">
             <ul class="claims-list omissions">
                 {% for item in analysis.notable_omissions %}
                 <li>
@@ -309,7 +257,27 @@
                 </li>
                 {% endfor %}
             </ul>
-        </div>
+            </div>
+        </details>
         {% endif %}
     </div>
+    
+    <script>
+        function scrollToSection(id) {
+            const section = document.getElementById(id);
+            if (section) {
+                // Ensure it's open
+                section.open = true;
+                // Scroll it into view smoothly
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Optional: visual flash
+                const summary = section.querySelector('.accordion-summary');
+                if(summary) {
+                    summary.style.transition = 'background-color 0.3s ease';
+                    summary.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+                    setTimeout(() => { summary.style.backgroundColor = 'transparent'; }, 600);
+                }
+            }
+        }
+    </script>
 </div>

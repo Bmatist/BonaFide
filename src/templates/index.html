@@ -6,24 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BonaFide</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <link rel="stylesheet" href="/static/styles.css?v=3">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css?v=18">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap"
+        rel="stylesheet">
 </head>
 
 <body>
     <div class="container">
         <header>
             <h1>BonaFide</h1>
-            <p>Analyze news articles for political orientation and objectivity using AI.</p>
+            <p>Your personal AI editorial auditor for bias, framing, and factual integrity.</p>
         </header>
 
         <main>
-            <div class="search-box">
-                <form hx-post="/analyze" hx-target="#result-container" hx-indicator="#loading">
-                    <input type="url" name="url" placeholder="Paste article URL here..." required>
-                    <button type="submit">Analyze Article</button>
-                </form>
-            </div>
+            <form class="floating-search" hx-post="/analyze" hx-target="#result-container" hx-indicator="#loading">
+                <input type="url" name="url" placeholder="Paste article URL here..." required>
+                <select name="language" class="language-select">
+                    <option value="English" selected>EN</option>
+                    <option value="French">FR</option>
+                    <option value="Spanish">ES</option>
+                    <option value="Arabic">AR</option>
+                    <option value="German">DE</option>
+                    <option value="Italian">IT</option>
+                </select>
+                <button type="submit">Analyze Article</button>
+            </form>
 
             <div id="loading" class="htmx-indicator">
                 <div class="spinner"></div>
